@@ -30,12 +30,12 @@ export const PDF_REPORT_STYLES = `
   #pr .rt-h.warn { background:rgba(200,149,32,.12); color:#c89520; }
   #pr .rt-h.bad { background:rgba(212,64,64,.12); color:#d44040; }
   #pr .c-or { color:#D48A3A; } #pr .c-bl { color:#4888C8; } #pr .c-gr { color:#3d9952; } #pr .c-pu { color:#8E62A8; }
-  #pr .ft { width:100%; border-collapse:collapse; font-family:JetBrains Mono,monospace; font-size:9px; }
-  #pr .ft tr { border-bottom:1px solid #ececf0; } #pr .ft tr:last-child { border-bottom:none; }
-  #pr .ft td { padding:4px 0; vertical-align:baseline; }
-  #pr .fl-label { font-weight:600; color:#6b6b76; white-space:nowrap; width:140px; }
-  #pr .fl-formula { color:#9d9da8; font-size:8.5px; }
-  #pr .fl-value { font-weight:700; color:#3d9952; text-align:right; white-space:nowrap; }
+  #pr .ft { width:100%; border-collapse:collapse; font-family:JetBrains Mono,monospace; font-size:10.5px; }
+  #pr .ft tr { border-bottom:1px solid #e0e0e6; } #pr .ft tr:last-child { border-bottom:none; }
+  #pr .ft td { padding:6px 0; vertical-align:baseline; }
+  #pr .fl-label { font-weight:700; color:#111118; white-space:nowrap; width:170px; }
+  #pr .fl-formula { color:#34343c; font-size:10px; }
+  #pr .fl-value { font-weight:700; color:#1f6fb2; text-align:right; white-space:nowrap; }
   #pr .kb { margin:0; padding:6px 8px; background:#fafafe; border:1px solid #e6e6eb; border-radius:4px; overflow:hidden; }
   #pr .kb .katex { font-size:0.72em; }
   #pr .eq-sections { display:flex; flex-direction:column; gap:0; }
