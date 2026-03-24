@@ -1,24 +1,12 @@
-name: Deploy to GitHub Pages
+name: Deploy to Netlify
 
 on:
   push:
     branches: ["master"]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,16 +22,10 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build -- --base=/RatioLab/
+        run: npm run build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to Netlify (production)
+        run: npx netlify-cli deploy --dir=dist --prod --message "GitHub Actions deploy ${GITHUB_SHA}"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
