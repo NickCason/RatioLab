@@ -1,0 +1,89 @@
+.tt-trigger {
+  display: flex;
+}
+
+.tt-panel {
+  position: fixed;
+  z-index: 99999;
+  max-width: 340px;
+  min-width: 200px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg1);
+  border: 1px solid var(--brd);
+  box-shadow: var(--shh), 0 0 0 1px var(--glass-brd);
+  pointer-events: auto;
+  animation: tt-in 0.15s ease-out !important;
+  visibility: hidden;
+}
+
+@keyframes tt-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tt-title {
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 6px;
+  letter-spacing: 0.2px;
+}
+
+.tt-desc {
+  font-family: "DM Sans", sans-serif;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--t2);
+  line-height: 1.55;
+}
+
+.tt-math {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--brd);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tt-math-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tt-katex .katex {
+  font-size: 1.15em;
+  color: var(--t1);
+}
+
+.cd-ribbon {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  width: 22px;
+  padding: 2px 0 4px;
+  border-radius: 0 0 5px 5px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0.7;
+  transition: opacity 0.2s, padding 0.2s;
+}
+
+.cd-ribbon:hover {
+  opacity: 1;
+  padding-bottom: 6px;
+}

@@ -1,0 +1,31 @@
+.odo {
+  display: inline-flex;
+  line-height: 1;
+  vertical-align: baseline;
+}
+
+.odo-slot {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  line-height: 1;
+}
+
+.odo-drum {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.odo-num {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.odo-sep {
+  display: inline-block;
+  line-height: 1;
+}

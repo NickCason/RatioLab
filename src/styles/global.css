@@ -1,0 +1,80 @@
+.vp {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: inherit;
+  line-height: 1.4;
+  letter-spacing: -0.2px;
+}
+
+.vp-ratio {
+  background: rgba(74, 143, 212, 0.12);
+  color: var(--blu);
+}
+
+.vp-eff {
+  background: rgba(61, 153, 82, 0.12);
+  color: var(--grn);
+}
+
+.vp-travel {
+  background: rgba(155, 109, 181, 0.12);
+  color: var(--pur);
+}
+
+.vp-mrl {
+  background: rgba(212, 148, 92, 0.12);
+  color: var(--orn);
+}
+
+.vp-speed {
+  background: rgba(72, 136, 200, 0.12);
+  color: var(--blu);
+}
+
+.vp-enc {
+  background: rgba(168, 125, 72, 0.1);
+  color: var(--orn);
+}
+
+.katex-wrap {
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.katex-wrap .katex {
+  font-size: 0.95em;
+}
+
+.katex .stretchy.colorbox {
+  border-radius: 0.35em;
+}
+
+@media (max-width: 700px) {
+  .app {
+    padding: 24px 16px;
+  }
+
+  .rg {
+    grid-template-columns: 1fr;
+  }
+
+  .cd {
+    width: 230px;
+  }
+
+  .fln {
+    grid-template-columns: 1fr;
+  }
+
+  .hdr {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .hdr-r {
+    justify-content: center;
+  }
+}

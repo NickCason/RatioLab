@@ -1,0 +1,223 @@
+.cd {
+  width: 290px;
+  border-radius: 14px;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shc);
+}
+
+.cd:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shh);
+}
+
+.cd.dg {
+  opacity: 0.35;
+  transform: scale(0.9) rotate(-1deg);
+}
+
+.cd.dov {
+  transform: translateY(-2px);
+  box-shadow: var(--shh);
+}
+
+.cd-wm {
+  position: absolute;
+  right: -14px;
+  bottom: -14px;
+  width: 130px;
+  height: 130px;
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.cd-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 16px 8px;
+  cursor: grab;
+  user-select: none;
+  position: relative;
+  z-index: 1;
+}
+
+.cd-h:active {
+  cursor: grabbing;
+}
+
+.cd-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cd-nm {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-family: "DM Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  outline: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.2s;
+}
+
+.cd-nm:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cd-nm:focus {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.cd-acts {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.cd-ab {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.cd-ab:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.cd-ab.del:hover {
+  background: rgba(255, 82, 82, 0.2);
+}
+
+.cd-b {
+  padding: 0 16px 18px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.cd-b.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.si {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.fr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.fr:last-child {
+  margin-bottom: 0;
+}
+
+.fl {
+  font-size: 14px;
+  white-space: nowrap;
+  font-weight: 500;
+  font-family: "DM Sans", sans-serif;
+}
+
+.fu {
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  min-width: 16px;
+  opacity: 0.45;
+}
+
+.bdg {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+  margin-top: 10px;
+}
+
+.ct {
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  font-family: "DM Sans", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ct.on {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.cs {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  color: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,.5)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.lc {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.bp {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}

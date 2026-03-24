@@ -1,0 +1,101 @@
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 44px;
+}
+
+.hdr-l {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logotype {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logotype-text {
+  font-family: "DM Sans", sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--t1);
+  line-height: 1;
+}
+
+.logotype-ratio {
+  font-weight: 600;
+}
+
+.logotype-lab {
+  font-weight: 800;
+  color: #6366F1;
+}
+
+.hdr p {
+  color: var(--t2);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.1px;
+}
+
+.hdr-r {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--brd);
+  background: var(--bg1);
+  color: var(--t1);
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.export-btn:hover {
+  background: var(--mon);
+  color: var(--mot);
+  border-color: var(--mon);
+  box-shadow: var(--shh);
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.export-kbd {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--bgi);
+  border: 1px solid var(--brd);
+  color: var(--t3);
+  margin-left: 2px;
+  line-height: 1;
+}
+
+.export-btn .spin {
+  animation: espin 0.8s linear infinite;
+}
+
+@keyframes espin {
+  to {
+    transform: rotate(360deg);
+  }
+}

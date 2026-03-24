@@ -1,0 +1,51 @@
+.tt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tt-l {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  width: 38px;
+  text-align: right;
+}
+
+.tt-s {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--tb);
+  position: relative;
+  transition: background 0.3s;
+  border: 1px solid var(--brd);
+}
+
+.tt-s.on {
+  background: var(--to);
+  border-color: var(--to);
+}
+
+.tt-s::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--tk);
+  transition: transform 0.3s, background 0.3s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.tt-s.on::after {
+  transform: translateX(20px);
+  background: var(--bg1);
+}

@@ -1,0 +1,833 @@
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+
+// ─── Types & Config ───────────────────────────────────────────────
+const T = { SERVO: "servo", GEARBOX: "gearbox", GEAR_MESH: "gear_mesh", BELT_PULLEY: "belt_pulley", RACK_PINION: "rack_pinion" };
+
+// Light theme cards — soft tinted backgrounds with white text
+const CT = {
+  [T.SERVO]:       { accent:"#E8913A", bg:"#D48A3A", bg2:"#C07830", text:"#fff", sub:"rgba(255,255,255,.72)", inBg:"rgba(255,255,255,.13)", inBrd:"rgba(255,255,255,.22)", inTxt:"#fff", badge:"rgba(255,255,255,.18)", icon:"#fff", border:"#C07830" },
+  [T.GEARBOX]:     { accent:"#4A8FD4", bg:"#4888C8", bg2:"#3B78B8", text:"#fff", sub:"rgba(255,255,255,.72)", inBg:"rgba(255,255,255,.13)", inBrd:"rgba(255,255,255,.22)", inTxt:"#fff", badge:"rgba(255,255,255,.18)", icon:"#fff", border:"#3B78B8" },
+  [T.GEAR_MESH]:   { accent:"#5AAF6D", bg:"#4EA063", bg2:"#3F8E54", text:"#fff", sub:"rgba(255,255,255,.72)", inBg:"rgba(255,255,255,.13)", inBrd:"rgba(255,255,255,.22)", inTxt:"#fff", badge:"rgba(255,255,255,.18)", icon:"#fff", border:"#3F8E54" },
+  [T.BELT_PULLEY]: { accent:"#9B6DB5", bg:"#8E62A8", bg2:"#7D5498", text:"#fff", sub:"rgba(255,255,255,.72)", inBg:"rgba(255,255,255,.13)", inBrd:"rgba(255,255,255,.22)", inTxt:"#fff", badge:"rgba(255,255,255,.18)", icon:"#fff", border:"#7D5498" },
+  [T.RACK_PINION]: { accent:"#D47352", bg:"#C46848", bg2:"#B45A3C", text:"#fff", sub:"rgba(255,255,255,.72)", inBg:"rgba(255,255,255,.13)", inBrd:"rgba(255,255,255,.22)", inTxt:"#fff", badge:"rgba(255,255,255,.18)", icon:"#fff", border:"#B45A3C" },
+};
+// Dark theme cards — deeper muted tinted backgrounds
+const CTD = {
+  [T.SERVO]:       { accent:"#D4945C", bg:"#3D2A18", bg2:"#33220F", text:"#F0D4B4", sub:"rgba(240,212,180,.55)", inBg:"rgba(212,148,92,.1)", inBrd:"rgba(212,148,92,.22)", inTxt:"#F0D4B4", badge:"rgba(212,148,92,.16)", icon:"#D4945C", border:"#D4945C" },
+  [T.GEARBOX]:     { accent:"#6AAAE0", bg:"#1A2A40", bg2:"#142238", text:"#B8D8F4", sub:"rgba(184,216,244,.55)", inBg:"rgba(106,170,224,.1)", inBrd:"rgba(106,170,224,.22)", inTxt:"#B8D8F4", badge:"rgba(106,170,224,.16)", icon:"#6AAAE0", border:"#6AAAE0" },
+  [T.GEAR_MESH]:   { accent:"#6FC482", bg:"#1A3020", bg2:"#14281A", text:"#B8E4C4", sub:"rgba(184,228,196,.55)", inBg:"rgba(111,196,130,.1)", inBrd:"rgba(111,196,130,.22)", inTxt:"#B8E4C4", badge:"rgba(111,196,130,.16)", icon:"#6FC482", border:"#6FC482" },
+  [T.BELT_PULLEY]: { accent:"#B48BCC", bg:"#2A1E38", bg2:"#221830", text:"#DCCCE8", sub:"rgba(220,204,232,.55)", inBg:"rgba(180,139,204,.1)", inBrd:"rgba(180,139,204,.22)", inTxt:"#DCCCE8", badge:"rgba(180,139,204,.16)", icon:"#B48BCC", border:"#B48BCC" },
+  [T.RACK_PINION]: { accent:"#E0937A", bg:"#381E16", bg2:"#30180E", text:"#F0CCC0", sub:"rgba(240,204,192,.55)", inBg:"rgba(224,147,122,.1)", inBrd:"rgba(224,147,122,.22)", inTxt:"#F0CCC0", badge:"rgba(224,147,122,.16)", icon:"#E0937A", border:"#E0937A" },
+};
+
+const DEFS = {
+  [T.SERVO]:       { label:"Servo Motor",   defaults:{ name:"Servo Motor", encoderPPR:8192, ratedTorqueNm:3.0, ratedSpeedRPM:3000, rotorInertia:1.2 }},
+  [T.GEARBOX]:     { label:"Gearbox",       defaults:{ name:"Gearbox", ratioNum:10, ratioDen:1, efficiency:95 }},
+  [T.GEAR_MESH]:   { label:"Gear Mesh",     defaults:{ name:"Gear Mesh", drivingTeeth:20, drivenTeeth:60, efficiency:98 }},
+  [T.BELT_PULLEY]: { label:"Belt / Pulley", defaults:{ name:"Belt / Pulley", bpMode:"teeth", drivingTeeth:16, drivenTeeth:48, drivingDia:2, drivenDia:6, efficiency:97 }},
+  [T.RACK_PINION]: { label:"Rack & Pinion", defaults:{ name:"Rack & Pinion", pinionTeeth:20, pinionPitch:0.5, rpUnit:"in", efficiency:96 }},
+};
+const OD = { SPROCKET:"sprocket", DIRECT:"direct" };
+let _id=0; const uid=()=>`c${++_id}_${Date.now().toString(36)}`;
+const defChain=()=>[{id:uid(),type:T.SERVO,...DEFS[T.SERVO].defaults},{id:uid(),type:T.GEARBOX,...DEFS[T.GEARBOX].defaults}];
+
+// ─── Icons ────────────────────────────────────────────────────────
+const IC={
+  [T.SERVO]:c=>(<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>),
+  [T.GEARBOX]:c=>(<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><circle cx="12" cy="12" r="7" strokeDasharray="3 2"/></svg>),
+  [T.GEAR_MESH]:c=>(<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="5"/><circle cx="17" cy="12" r="3"/><circle cx="9" cy="12" r="1.5" fill={c} opacity=".3"/><circle cx="17" cy="12" r="1" fill={c} opacity=".3"/></svg>),
+  [T.BELT_PULLEY]:c=>(<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="12" r="4"/><circle cx="18" cy="12" r="3"/><path d="M6 8h12M6 16h12" strokeDasharray="2 1.5"/><circle cx="6" cy="12" r="1.2" fill={c} opacity=".3"/><circle cx="18" cy="12" r="1" fill={c} opacity=".3"/></svg>),
+  [T.RACK_PINION]:c=>(<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="9" r="4"/><circle cx="12" cy="9" r="1.2" fill={c} opacity=".3"/><line x1="3" y1="17" x2="21" y2="17"/><line x1="5" y1="15" x2="5" y2="17"/><line x1="8" y1="15" x2="8" y2="17"/><line x1="11" y1="15" x2="11" y2="17"/><line x1="14" y1="15" x2="14" y2="17"/><line x1="17" y1="15" x2="17" y2="17"/><line x1="20" y1="15" x2="20" y2="17"/></svg>),
+};
+const WM={
+  [T.SERVO]:`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><path d="M65 8L15 68h45l-5 44 50-60H60l5-44z" fill="currentColor"/></svg>`,
+  [T.GEARBOX]:`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="18" fill="currentColor"/><circle cx="60" cy="60" r="38" fill="none" stroke="currentColor" stroke-width="8" stroke-dasharray="16 10"/><rect x="56" y="8" width="8" height="16" rx="2" fill="currentColor"/><rect x="56" y="96" width="8" height="16" rx="2" fill="currentColor"/><rect x="8" y="56" width="16" height="8" rx="2" fill="currentColor"/><rect x="96" y="56" width="16" height="8" rx="2" fill="currentColor"/></svg>`,
+  [T.GEAR_MESH]:`<svg viewBox="0 0 140 120" xmlns="http://www.w3.org/2000/svg"><circle cx="48" cy="60" r="32" fill="none" stroke="currentColor" stroke-width="7" stroke-dasharray="14 8"/><circle cx="48" cy="60" r="10" fill="currentColor"/><circle cx="100" cy="60" r="22" fill="none" stroke="currentColor" stroke-width="6" stroke-dasharray="10 6"/><circle cx="100" cy="60" r="7" fill="currentColor"/></svg>`,
+  [T.BELT_PULLEY]:`<svg viewBox="0 0 140 120" xmlns="http://www.w3.org/2000/svg"><circle cx="35" cy="60" r="28" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="35" cy="60" r="8" fill="currentColor"/><circle cx="105" cy="60" r="20" fill="none" stroke="currentColor" stroke-width="6"/><circle cx="105" cy="60" r="6" fill="currentColor"/><line x1="35" y1="32" x2="105" y2="40" stroke="currentColor" stroke-width="4"/><line x1="35" y1="88" x2="105" y2="80" stroke="currentColor" stroke-width="4"/></svg>`,
+  [T.RACK_PINION]:`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="42" r="24" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="60" cy="42" r="8" fill="currentColor"/><rect x="10" y="82" width="100" height="10" rx="3" fill="currentColor"/><rect x="20" y="72" width="6" height="12" rx="1" fill="currentColor"/><rect x="34" y="72" width="6" height="12" rx="1" fill="currentColor"/><rect x="48" y="72" width="6" height="12" rx="1" fill="currentColor"/><rect x="62" y="72" width="6" height="12" rx="1" fill="currentColor"/><rect x="76" y="72" width="6" height="12" rx="1" fill="currentColor"/><rect x="90" y="72" width="6" height="12" rx="1" fill="currentColor"/></svg>`,
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────
+function sr(s){switch(s.type){case T.GEARBOX:return n(s.ratioNum,1)/n(s.ratioDen,1);case T.GEAR_MESH:return n(s.drivenTeeth,1)/n(s.drivingTeeth,1);case T.BELT_PULLEY:return s.bpMode==="teeth"?n(s.drivenTeeth,1)/n(s.drivingTeeth,1):n(s.drivenDia,1)/n(s.drivingDia,1);case T.RACK_PINION:return 1;default:return 1;}}
+function se(s){return n(s.efficiency,100)/100}
+function n(v,fb=0){const x=parseFloat(v);return isNaN(x)||x===0?fb:x}
+function lastRP(c){for(let i=c.length-1;i>=0;i--)if(c[i].type!==T.SERVO)return c[i].type===T.RACK_PINION;return false}
+function anyRP(c){return c.some(x=>x.type===T.RACK_PINION)}
+function badge(s){switch(s.type){case T.GEARBOX:return`${s.ratioNum||"?"}:${s.ratioDen||"?"}`;case T.GEAR_MESH:return`${s.drivenTeeth||"?"}/${s.drivingTeeth||"?"} = ${sr(s).toFixed(3)}`;case T.BELT_PULLEY:return s.bpMode==="teeth"?`${s.drivenTeeth||"?"}/${s.drivingTeeth||"?"} = ${sr(s).toFixed(3)}`:`⌀${s.drivenDia||"?"}/⌀${s.drivingDia||"?"} = ${sr(s).toFixed(3)}`;case T.RACK_PINION:return`${(n(s.pinionTeeth,0)*n(s.pinionPitch,0)).toFixed(3)} ${s.rpUnit}/rev`;default:return""}}
+
+// ─── Compute ──────────────────────────────────────────────────────
+function compute(chain,om,lin,loadInertia){
+  const sv=chain.find(c=>c.type===T.SERVO);if(!sv)return null;
+  const st=chain.filter(c=>c.type!==T.SERVO);
+  let tr=1,te=1;for(const s of st){tr*=sr(s);te*=se(s)}
+  const mrl=tr,ppr=n(sv.encoderPPR,8192),cpm=ppr*4,cpl=cpm*mrl;
+  const rpl=lastRP(chain),rpc=rpl?st[st.length-1]:null;
+  let dpl,u;
+  if(rpl){dpl=n(rpc.pinionPitch,0)*n(rpc.pinionTeeth,0);u=rpc.rpUnit||"in"}
+  else if(om==="linear"){if(lin.device===OD.SPROCKET)dpl=n(lin.pitch,0)*n(lin.teeth,0);else dpl=Math.PI*n(lin.diameter,0);u=lin.unit||"in"}
+  else{dpl=360;u="deg"}
+  const upm=mrl?dpl/mrl:0,upc=cpl?dpl/cpl:0;
+  const rpm=n(sv.ratedSpeedRPM,0),oRPM=mrl?rpm/mrl:0,oSpd=oRPM*dpl;
+  const tq=n(sv.ratedTorqueNm,0)*tr*te;
+  const jMotor=n(sv.rotorInertia,0);
+  const jLoad=n(loadInertia,0);
+  const jReflected=tr!==0?jLoad/(tr*tr):0;
+  const inertiaRatio=jMotor!==0?jReflected/jMotor:0;
+  return{mrl,cpm,cpl,dpl,upm,upc,u,tr,te,tq,ppr,rpl,rpm,oRPM,oSpd,jMotor,jLoad,jReflected,inertiaRatio};
+}
+
+// ─── KaTeX LaTeX builder ──────────────────────────────────────────
+// Variable color map for cross-referencing solved values in KaTeX
+const VC = {
+  ratio:  { fg:'#3570a8', bg:'#dde9f5' },
+  eff:    { fg:'#2d7a3e', bg:'#d9efdd' },
+  travel: { fg:'#7a5299', bg:'#e8ddf0' },
+  mrl:    { fg:'#b07030', bg:'#f5e6d4' },
+  speed:  { fg:'#3570a8', bg:'#dde9f5' },
+  enc:    { fg:'#8a6540', bg:'#f5ead8' },
+};
+function vp(vc, content) {
+  return `\\colorbox{${vc.bg}}{\\color{${vc.fg}}{\\,${content}\\,}}`;
+}
+
+// Returns array of { title, tex } sections for per-section rendering
+function buildLatexSections(chain,om,lin,r){
+  if(!r)return[];
+  const sv=chain.find(c=>c.type===T.SERVO);if(!sv)return[];
+  const st=chain.filter(c=>c.type!==T.SERVO);
+  const sections=[];
+
+  // ── 0. Encoder ──
+  let encTex=`\\text{PPR} = ${sv.encoderPPR||"?"}\\\\[4pt]`;
+  encTex+=`\\text{Counts/Motor Rev} = \\text{PPR} \\times 4 = ${sv.encoderPPR||"?"} \\times 4 = ${vp(VC.enc, r.cpm)}\\\\[4pt]`;
+  encTex+=`\\text{Counts/Load Rev} = ${vp(VC.enc, r.cpm)} \\times ${vp(VC.mrl, parseFloat(r.mrl.toFixed(4)))} = ${vp(VC.enc, parseFloat(r.cpl.toFixed(0)))}`;
+  sections.push({title:'Encoder & Resolution',tex:encTex});
+
+  // ── 1. Gear Ratio ──
+  const fracs=st.map(s=>{
+    if(s.type===T.GEARBOX)return`\\frac{${s.ratioNum||"?"}}{${s.ratioDen||"?"}}`;
+    if(s.type===T.GEAR_MESH)return`\\frac{${s.drivenTeeth||"?"}}{${s.drivingTeeth||"?"}}`;
+    if(s.type===T.BELT_PULLEY)return s.bpMode==="teeth"?`\\frac{${s.drivenTeeth||"?"}}{${s.drivingTeeth||"?"}}`:`\\frac{\\varnothing${s.drivenDia||"?"}}{\\varnothing${s.drivingDia||"?"}}`;
+    return"1";
+  });
+  const labels=st.map(s=>{
+    if(s.type===T.GEARBOX)return`\\small\\text{${s.name||'Gearbox'}}`;
+    if(s.type===T.GEAR_MESH)return`\\small\\text{${s.name||'Gear Mesh'}}`;
+    if(s.type===T.BELT_PULLEY)return`\\small\\text{${s.name||'Belt/Pulley'}}`;
+    if(s.type===T.RACK_PINION)return`\\small\\text{R\\&P}`;
+    return'';
+  });
+  if(fracs.length){
+    let ratTex=`N = ${fracs.map((f,i)=>`\\underbrace{${f}}_{${labels[i]}}`).join('\\times')} = ${vp(VC.ratio, parseFloat(r.tr.toFixed(4)))}\\\\[4pt]`;
+    ratTex+=`\\text{Motor Rev / Load Rev} = N = ${vp(VC.mrl, parseFloat(r.mrl.toFixed(4)))}`;
+    sections.push({title:'Total Gear Ratio',tex:ratTex});
+  }
+
+  // ── 2. Combined Efficiency ──
+  const effs=st.map((s,i)=>`\\underbrace{${(s.efficiency??100)/100}}_{${labels[i]}}`);
+  let effTex=`\\eta = ${effs.join('\\times')} = ${vp(VC.eff, parseFloat(r.te.toFixed(4)))} \\;(${parseFloat((r.te*100).toFixed(2))}\\%)`;
+  sections.push({title:'Combined Efficiency',tex:effTex});
+
+  // ── 3. Travel per Rev ──
+  let travelExpr='';
+  if(r.rpl){const rp=st[st.length-1];travelExpr=`\\text{pitch}\\times\\text{teeth} = ${rp.pinionPitch||"?"}\\times${rp.pinionTeeth||"?"}`}
+  else if(om==="linear"){if(lin.device===OD.SPROCKET)travelExpr=`\\text{pitch}\\times\\text{teeth} = ${lin.pitch}\\times${lin.teeth}`;else travelExpr=`\\pi\\times D = \\pi\\times${lin.diameter}`}
+  else{travelExpr=`360`}
+  let travTex=`d_{\\text{load}} = ${travelExpr} = ${vp(VC.travel, parseFloat(r.dpl.toFixed(4)))}\\;\\text{${r.u}/load rev}\\\\[6pt]`;
+  travTex+=`d_{\\text{motor}} = \\frac{d_{\\text{load}}}{N} = \\frac{${vp(VC.travel, parseFloat(r.dpl.toFixed(4)))}}{${vp(VC.ratio, parseFloat(r.tr.toFixed(4)))}} = ${parseFloat(r.upm.toFixed(6))}\\;\\text{${r.u}/motor rev}`;
+  sections.push({title:'Travel per Revolution',tex:travTex});
+
+  // ── 4. Output Torque ──
+  let tqTex=`\\tau_{\\text{out}} = \\tau_{\\text{motor}} \\times N \\times \\eta = ${sv.ratedTorqueNm||"?"}\\;\\text{Nm} \\times ${vp(VC.ratio, parseFloat(r.tr.toFixed(3)))} \\times ${vp(VC.eff, parseFloat(r.te.toFixed(4)))} = ${parseFloat(r.tq.toFixed(3))}\\;\\text{Nm}`;
+  sections.push({title:'Output Torque',tex:tqTex});
+
+  // ── 5. Output Speed ──
+  let spdTex=`n_{\\text{out}} = \\frac{n_{\\text{motor}}}{N} = \\frac{${sv.ratedSpeedRPM||"?"}\\;\\text{RPM}}{${vp(VC.ratio, parseFloat(r.mrl.toFixed(3)))}} = ${vp(VC.speed, parseFloat(r.oRPM.toFixed(2)))}\\;\\text{RPM}`;
+  if(r.u!=="deg"){
+    spdTex+=`\\\\[6pt]v_{\\text{out}} = ${vp(VC.speed, parseFloat(r.oRPM.toFixed(2)))}\\;\\text{RPM} \\times d_{\\text{load}} = ${vp(VC.speed, parseFloat(r.oRPM.toFixed(2)))} \\times ${vp(VC.travel, parseFloat(r.dpl.toFixed(4)))} = ${parseFloat(r.oSpd.toFixed(2))}\\;\\text{${r.u}/min}`;
+  }
+  sections.push({title:'Output Speed',tex:spdTex});
+
+  return sections;
+}
+// Legacy single-string builder for PDF export
+function buildLatex(chain,om,lin,r){
+  const secs=buildLatexSections(chain,om,lin,r);
+  return secs.map(s=>`\\textbf{${s.title}}\\\\[4pt]${s.tex}`).join('\\\\[14pt]');
+}
+
+// ─── Build plain formula lines ────────────────────────────────────
+// tag helper: wraps value in a span with a color class for variable pills
+function vt(cls,val){ return `<span class="vp vp-${cls}">${val}</span>`; }
+
+function buildLines(chain,om,lin,r){
+  const sv=chain.find(c=>c.type===T.SERVO);if(!sv||!r)return[];
+  const st=chain.filter(c=>c.type!==T.SERVO),L=[],f=(v,d=6)=>parseFloat((v||0).toFixed(d)).toString();
+
+  // Section: Encoder
+  L.push({section:"Encoder & Resolution"});
+  L.push({l:"Encoder PPR",m:`${sv.encoderPPR||"?"}`,v:`${n(sv.encoderPPR,0)}`,raw:false});
+  L.push({l:"Counts / Motor Rev",m:`PPR × 4 = ${n(sv.encoderPPR,0)} × 4`,v:vt('enc',`${r.cpm}`),raw:true});
+  L.push({l:"Counts / Load Rev",m:`${vt('enc',r.cpm)} × ${vt('mrl',f(r.mrl,4))}`,v:vt('enc',f(r.cpl,0)),raw:true});
+
+  // Section: Gear Ratio
+  L.push({section:"Gear Ratio"});
+  const rt=[];
+  for(const s of st){if(s.type===T.GEARBOX)rt.push(`(${s.ratioNum||"?"}/${s.ratioDen||"?"})`);else if(s.type===T.GEAR_MESH)rt.push(`(${s.drivenTeeth||"?"}/${s.drivingTeeth||"?"})`);else if(s.type===T.BELT_PULLEY){if(s.bpMode==="teeth")rt.push(`(${s.drivenTeeth||"?"}/${s.drivingTeeth||"?"})`);else rt.push(`(⌀${s.drivenDia||"?"}/⌀${s.drivingDia||"?"})`)}else if(s.type===T.RACK_PINION)rt.push("(1:1 R&P)");}
+  if(rt.length){
+    L.push({l:"Total Gear Ratio (N)",m:rt.join(" × "),v:vt('ratio',f(r.tr)),raw:true});
+    L.push({l:"Motor Rev / Load Rev",m:"= N",v:vt('mrl',f(r.mrl)),raw:true});
+  }
+
+  // Section: Efficiency
+  L.push({section:"Efficiency"});
+  const et=st.map(s=>`(${(s.efficiency??100)/100})`);
+  L.push({l:"Combined Efficiency (η)",m:et.length?et.join(" × "):"1.0",v:vt('eff',f(r.te,4)),raw:true});
+
+  // Section: Travel
+  L.push({section:"Travel per Revolution"});
+  if(r.rpl){const rp=st[st.length-1];L.push({l:"Travel / Load Rev (d_load)",m:`Pitch × Teeth = ${rp.pinionPitch||"?"} × ${rp.pinionTeeth||"?"}`,v:vt('travel',`${f(r.dpl)} ${r.u}`),raw:true})}
+  else if(om==="linear"){if(lin.device===OD.SPROCKET)L.push({l:"Travel / Load Rev (d_load)",m:`Pitch × Teeth = ${lin.pitch} × ${lin.teeth}`,v:vt('travel',`${f(r.dpl)} ${r.u}`),raw:true});else L.push({l:"Travel / Load Rev (d_load)",m:`π × D = π × ${lin.diameter}`,v:vt('travel',`${f(r.dpl)} ${r.u}`),raw:true})}
+  else L.push({l:"Deg / Load Rev (d_load)",m:"360°",v:vt('travel',`360 deg`),raw:true});
+  L.push({l:"Travel / Motor Rev (d_motor)",m:`${vt('travel',f(r.dpl,4))} / ${vt('ratio',f(r.mrl,4))}`,v:`${f(r.upm)} ${r.u}`,raw:true});
+  L.push({l:`${r.u} / Count`,m:`${vt('travel',f(r.dpl,4))} / ${f(r.cpl,2)}`,v:`${f(r.upc,8)} ${r.u}`,raw:true});
+
+  // Section: Torque & Speed
+  L.push({section:"Torque & Speed"});
+  L.push({l:"Output Torque (τ_out)",m:`${sv.ratedTorqueNm||"?"} Nm × ${vt('ratio',f(r.tr,4))} × ${vt('eff',f(r.te,4))}`,v:`${f(r.tq,3)} Nm`,raw:true});
+  L.push({l:"Output Shaft Speed (n_out)",m:`${sv.ratedSpeedRPM||"?"} RPM / ${vt('ratio',f(r.mrl,4))}`,v:vt('speed',`${f(r.oRPM,2)} RPM`),raw:true});
+  if(r.u!=="deg")L.push({l:"Output Linear Speed (v_out)",m:`${vt('speed',f(r.oRPM,2))} RPM × ${vt('travel',f(r.dpl,4))}`,v:`${f(r.oSpd,2)} ${r.u}/min`,raw:true});
+
+  return L;
+}
+
+// ─── KaTeX Renderer ───────────────────────────────────────────────
+function Katex({tex}){
+  const ref=useRef(null);
+  const [loaded,setLoaded]=useState(!!window.katex);
+  useEffect(()=>{
+    if(window.katex){setLoaded(true);return}
+    const link=document.createElement("link");link.rel="stylesheet";link.href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css";document.head.appendChild(link);
+    const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js";sc.onload=()=>setLoaded(true);document.head.appendChild(sc);
+  },[]);
+  useEffect(()=>{if(loaded&&ref.current&&window.katex){try{window.katex.render(tex,ref.current,{displayMode:true,throwOnError:false,trust:true})}catch(e){ref.current.textContent=tex}}},[tex,loaded]);
+  return (<div ref={ref} style={{overflowX:"auto",padding:"4px 0"}} />);
+}
+
+
+// ─── PDF Export ───────────────────────────────────────────────────
+async function loadScript(src, globalCheck) {
+  if (globalCheck && globalCheck()) return;
+  return new Promise((res, rej) => {
+    // Remove any failed previous attempts
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) existing.remove();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => setTimeout(res, 50);
+    s.onerror = () => rej(new Error('Failed to load: ' + src));
+    document.head.appendChild(s);
+    // Timeout after 8s
+    setTimeout(() => rej(new Error('Timeout loading: ' + src)), 8000);
+  });
+}
+
+function triggerDownload(blob, filename) {
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+    return true;
+  } catch(e) {}
+  try {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const a = document.createElement('a');
+      a.href = reader.result;
+      a.download = filename;
+      a.click();
+    };
+    reader.readAsDataURL(blob);
+    return true;
+  } catch(e) {}
+  return false;
+}
+
+async function buildPDFReport(chain, r, fl, latex, fmt, setExporting, latexSections) {
+  if (!r) return;
+  setExporting(true);
+  
+  // Safety timeout — always stop spinning after 15s
+  const safetyTimer = setTimeout(() => { setExporting(false); }, 15000);
+  
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => !!window.html2canvas);
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => !!window.jspdf);
+    if (!window.katex) {
+      const link = document.createElement("link"); link.rel = "stylesheet"; link.href = "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"; document.head.appendChild(link);
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js', () => !!window.katex);
+    }
+    if (!window.html2canvas) throw new Error('html2canvas not available after load');
+    if (!window.jspdf) throw new Error('jspdf not available after load');
+  } catch(e) { 
+    console.error('Library load failed:', e);
+    clearTimeout(safetyTimer);
+    setExporting(false);
+    return; 
+  }
+
+  const sv = chain.find(c => c.type === T.SERVO);
+  const st = chain.filter(c => c.type !== T.SERVO);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+
+  const COLORS = {
+    [T.SERVO]: { bg:'#D48A3A', label:'Servo Motor' },
+    [T.GEARBOX]: { bg:'#4888C8', label:'Gearbox' },
+    [T.GEAR_MESH]: { bg:'#4EA063', label:'Gear Mesh' },
+    [T.BELT_PULLEY]: { bg:'#8E62A8', label:'Belt / Pulley' },
+    [T.RACK_PINION]: { bg:'#C46848', label:'Rack & Pinion' },
+  };
+
+  const chainCards = chain.map((c, i) => {
+    const col = COLORS[c.type];
+    let details = '';
+    if (c.type === T.SERVO) details = `<div class="cd-detail">PPR: ${c.encoderPPR} · ${c.ratedTorqueNm} Nm · ${c.ratedSpeedRPM} RPM · J<sub>rotor</sub>: ${c.rotorInertia} kg·cm²</div>`;
+    else if (c.type === T.GEARBOX) details = `<div class="cd-detail">Ratio: ${c.ratioNum}:${c.ratioDen} · Eff: ${c.efficiency}%</div>`;
+    else if (c.type === T.GEAR_MESH) details = `<div class="cd-detail">${c.drivingTeeth}T / ${c.drivenTeeth}T · Eff: ${c.efficiency}%</div>`;
+    else if (c.type === T.BELT_PULLEY) details = c.bpMode === 'teeth' ? `<div class="cd-detail">${c.drivingTeeth}T / ${c.drivenTeeth}T · Eff: ${c.efficiency}%</div>` : `<div class="cd-detail">⌀${c.drivingDia} / ⌀${c.drivenDia} · Eff: ${c.efficiency}%</div>`;
+    else if (c.type === T.RACK_PINION) details = `<div class="cd-detail">${c.pinionTeeth}T · Pitch: ${c.pinionPitch} ${c.rpUnit} · Eff: ${c.efficiency}%</div>`;
+    const bdg = c.type !== T.SERVO ? `<div class="cd-badge">${badge(c)}</div>` : '';
+    const arrow = i > 0 ? `<div class="chain-arrow"><svg width="28" height="14" viewBox="0 0 28 14"><path d="M0 7h22M18 3l6 4-6 4" stroke="#b0b0b8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>` : '';
+    return `${arrow}<div class="chain-card" style="border-left:3px solid ${col.bg}"><div class="cd-type" style="color:${col.bg}">${col.label}</div><div class="cd-name">${c.name}</div>${details}${bdg}</div>`;
+  }).join('');
+
+  const irClass = r.jMotor > 0 ? (r.inertiaRatio <= 10 ? 'good' : r.inertiaRatio <= 25 ? 'warn' : 'bad') : '';
+  const irLabel = r.jMotor > 0 ? (r.inertiaRatio <= 10 ? '✓ Good' : r.inertiaRatio <= 25 ? '⚠ Marginal' : '✕ High') : '';
+  const formulaRows = fl.map(x => `<tr><td class="fl-label">${x.l}</td><td class="fl-formula">${x.m}</td><td class="fl-value">= ${x.v}</td></tr>`).join('');
+
+  // Create hidden render container
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;background:#fff;padding:40px 44px;z-index:-1;';
+  container.innerHTML = `<style>
+  #pr * { box-sizing:border-box; margin:0; padding:0; }
+  #pr { font-family:DM Sans,sans-serif; color:#111118; line-height:1.5; }
+  #pr .rh { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; padding-bottom:14px; border-bottom:2px solid #e0e0e6; }
+  #pr .rh-t { font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+  #pr .rh-s { font-size:11px; color:#6b6b76; margin-top:3px; }
+  #pr .rh-m { text-align:right; font-family:JetBrains Mono,monospace; font-size:9px; color:#9d9da8; line-height:1.8; }
+  #pr .sec { margin-bottom:18px; }
+  #pr .sl { font-family:JetBrains Mono,monospace; font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#9d9da8; margin-bottom:10px; padding-bottom:5px; border-bottom:1px solid #e6e6eb; }
+  #pr .cw { display:flex; flex-wrap:wrap; gap:6px; align-items:center; row-gap:4px; }
+  #pr .chain-card { background:#fafafe; border:1px solid #e6e6eb; border-radius:6px; padding:8px 12px; min-width:115px; max-width:195px; flex-shrink:0; }
+  #pr .cd-type { font-family:JetBrains Mono,monospace; font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.7px; margin-bottom:1px; }
+  #pr .cd-name { font-size:12px; font-weight:700; margin-bottom:2px; }
+  #pr .cd-detail { font-family:JetBrains Mono,monospace; font-size:9px; color:#6b6b76; }
+  #pr .cd-badge { font-family:JetBrains Mono,monospace; font-size:9px; font-weight:600; color:#6b6b76; margin-top:3px; padding:1px 6px; background:#f0f0f4; border-radius:8px; display:inline-block; }
+  #pr .chain-arrow { flex-shrink:0; display:flex; align-items:center; }
+  #pr .rg { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  #pr .rt { padding:10px 12px; border-radius:6px; background:#fafafe; border:1px solid #e6e6eb; }
+  #pr .rt.w2 { grid-column:span 2; }
+  #pr .rt-l { font-family:JetBrains Mono,monospace; font-size:8px; text-transform:uppercase; letter-spacing:0.6px; color:#6b6b76; margin-bottom:3px; font-weight:500; }
+  #pr .rt-v { font-family:JetBrains Mono,monospace; font-size:16px; font-weight:700; letter-spacing:-0.3px; }
+  #pr .rt-u { font-size:9px; color:#9d9da8; margin-left:2px; font-weight:500; }
+  #pr .rt-h { display:inline-block; padding:1px 7px; border-radius:8px; font-family:JetBrains Mono,monospace; font-size:8px; font-weight:700; margin-top:3px; }
+  #pr .rt-h.good { background:rgba(61,153,82,.12); color:#3d9952; }
+  #pr .rt-h.warn { background:rgba(200,149,32,.12); color:#c89520; }
+  #pr .rt-h.bad { background:rgba(212,64,64,.12); color:#d44040; }
+  #pr .c-or { color:#D48A3A; } #pr .c-bl { color:#4888C8; } #pr .c-gr { color:#3d9952; } #pr .c-pu { color:#8E62A8; }
+  #pr .ft { width:100%; border-collapse:collapse; font-family:JetBrains Mono,monospace; font-size:9px; }
+  #pr .ft tr { border-bottom:1px solid #ececf0; } #pr .ft tr:last-child { border-bottom:none; }
+  #pr .ft td { padding:4px 0; vertical-align:baseline; }
+  #pr .fl-label { font-weight:600; color:#6b6b76; white-space:nowrap; width:140px; }
+  #pr .fl-formula { color:#9d9da8; font-size:8.5px; }
+  #pr .fl-value { font-weight:700; color:#3d9952; text-align:right; white-space:nowrap; }
+  #pr .kb { margin:0; padding:12px; background:#fafafe; border:1px solid #e6e6eb; border-radius:6px; overflow:hidden; }
+  #pr .kb .katex { font-size:0.82em; }
+  #pr .eq-sections { display:flex; flex-direction:column; gap:0; }
+  #pr .eq-b { border-radius:6px; background:#fafafe; border:1px solid #e6e6eb; padding:10px 14px; overflow:hidden; }
+  #pr .eq-t { font-family:DM Sans,sans-serif; font-size:10px; font-weight:700; color:#6b6b76; margin-bottom:6px; }
+  #pr .eq-d { border:none; height:1px; background:linear-gradient(90deg,transparent,#e0e0e6 15%,#e0e0e6 85%,transparent); margin:6px 0; }
+  #pr .eq-b .katex { font-size:0.82em; }
+  #pr .rf { margin-top:18px; padding-top:10px; border-top:1px solid #e6e6eb; font-family:JetBrains Mono,monospace; font-size:8px; color:#9d9da8; display:flex; justify-content:space-between; }
+  </style>
+  <div id="pr">
+    <div class="rh"><div><div class="rh-t">Servo Scaling Report</div><div class="rh-s">Geartrain configuration & axis parameter computation</div></div><div class="rh-m">${dateStr}<br>${timeStr}<br>${chain.length} component${chain.length>1?'s':''} · ${st.length} stage${st.length!==1?'s':''}</div></div>
+    <div class="sec"><div class="sl">Drive Train Configuration</div><div class="cw">${chainCards}</div></div>
+    <div class="sec"><div class="sl">Encoder & Resolution</div><div class="rg">
+      <div class="rt"><div class="rt-l">Motor Rev / Load Rev</div><div class="rt-v c-or">${fmt(r.mrl)}</div></div>
+      <div class="rt"><div class="rt-l">Counts / Load Rev</div><div class="rt-v c-gr">${fmt(r.cpl,0)}</div></div>
+      <div class="rt"><div class="rt-l">${r.u} / Motor Rev</div><div class="rt-v c-bl">${fmt(r.upm,6)}<span class="rt-u">${r.u}</span></div></div>
+      <div class="rt"><div class="rt-l">${r.u} / Count</div><div class="rt-v c-pu">${fmt(r.upc,8)}<span class="rt-u">${r.u}</span></div></div>
+      <div class="rt"><div class="rt-l">${r.u} / Load Rev</div><div class="rt-v">${fmt(r.dpl,6)}<span class="rt-u">${r.u}</span></div></div>
+    </div></div>
+    <div class="sec"><div class="sl">Torque & Speed</div><div class="rg">
+      <div class="rt"><div class="rt-l">Output Torque (w/ eff.)</div><div class="rt-v c-or">${fmt(r.tq,2)}<span class="rt-u">Nm</span></div></div>
+      <div class="rt"><div class="rt-l">Output Shaft Speed</div><div class="rt-v c-bl">${fmt(r.oRPM,2)}<span class="rt-u">RPM</span></div></div>
+      ${r.u!=="deg"?`<div class="rt"><div class="rt-l">Output Linear Speed</div><div class="rt-v c-pu">${fmt(r.oSpd,2)}<span class="rt-u">${r.u}/min</span></div></div>`:''}
+      <div class="rt"><div class="rt-l">Total Gear Ratio</div><div class="rt-v">${fmt(r.tr)}<span class="rt-u">:1</span></div></div>
+      <div class="rt"><div class="rt-l">Combined Efficiency</div><div class="rt-v" style="color:${r.te>0.9?'#3d9952':'#d44040'}">${fmt(r.te*100,1)}<span class="rt-u">%</span></div></div>
+    </div></div>
+    ${r.jMotor>0?`<div class="sec"><div class="sl">Inertia Matching</div><div class="rg">
+      <div class="rt w2"><div class="rt-l">Inertia Ratio (J_load / J_motor)</div><div class="rt-v" style="color:${r.inertiaRatio<=10?'#3d9952':r.inertiaRatio<=25?'#c89520':'#d44040'}">${fmt(r.inertiaRatio,2)}<span class="rt-u">:1</span></div><div class="rt-h ${irClass}">${irLabel}</div></div>
+      <div class="rt"><div class="rt-l">Reflected Load Inertia</div><div class="rt-v">${fmt(r.jReflected,4)}<span class="rt-u">kg·cm²</span></div></div>
+    </div></div>`:''}
+    <div class="sec"><div class="sl">Calculation Path — Table</div><table class="ft">${formulaRows}</table></div>
+    <div class="sec"><div class="sl">Calculation Path — Equations</div><div class="eq-sections">${
+      latexSections.map((_,i)=>`<div class="eq-b"><div class="eq-t">${_.title}</div><div class="kb" id="pdf-katex-${i}"></div></div>`).join('<hr class="eq-d"/>')
+    }</div></div>
+    <div class="rf"><span>Servo Scaling Calculator</span><span>Generated ${dateStr} at ${timeStr}</span></div>
+  </div>`;
+
+  document.body.appendChild(container);
+
+  // Render KaTeX per section in the hidden container
+  const secs = latexSections;
+  secs.forEach((s,i) => {
+    const el = container.querySelector(`#pdf-katex-${i}`);
+    if (!el) return;
+    try {
+      window.katex.render(s.tex, el, { displayMode:true, throwOnError:false, trust:true });
+    } catch(e) {
+      el.textContent = s.tex;
+    }
+  });
+
+  await document.fonts.ready;
+  await new Promise(res => setTimeout(res, 400));
+
+  try {
+    // Race html2canvas against a 10s timeout
+    const canvasPromise = window.html2canvas(container, { scale:2, useCORS:true, backgroundColor:'#ffffff', width:720, windowWidth:720, logging:false });
+    const timeoutPromise = new Promise((_,rej) => setTimeout(() => rej(new Error('html2canvas timed out')), 10000));
+    const canvas = await Promise.race([canvasPromise, timeoutPromise]);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'letter' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 36;
+    const contentW = pageW - margin * 2;
+    const ratio = contentW / canvas.width;
+    const sliceH = (pageH - margin * 2) / ratio;
+    let yOffset = 0, page = 0;
+    while (yOffset < canvas.height) {
+      if (page > 0) pdf.addPage();
+      const srcH = Math.min(sliceH, canvas.height - yOffset);
+      const destH = srcH * ratio;
+      const slice = document.createElement('canvas');
+      slice.width = canvas.width; slice.height = srcH;
+      slice.getContext('2d').drawImage(canvas, 0, yOffset, canvas.width, srcH, 0, 0, canvas.width, srcH);
+      pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, margin, contentW, destH);
+      yOffset += sliceH; page++;
+    }
+    const pdfBlob = pdf.output('blob');
+    const ok = triggerDownload(pdfBlob, 'servo-scaling-report.pdf');
+    if (!ok) {
+      // Last resort: embed as data URI link the user can right-click save
+      const dataUri = pdf.output('datauristring');
+      const w = window.open('');
+      if (w) { w.document.write(`<iframe width="100%" height="100%" src="${dataUri}"></iframe>`); }
+    }
+  } catch(e) { 
+    console.error('PDF generation failed:', e);
+  }
+
+  try { document.body.removeChild(container); } catch(e) {}
+  clearTimeout(safetyTimer);
+  setExporting(false);
+}
+const CSS=`
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+:root,.app[data-theme="light"]{
+  --bg0:#f8f8fa;--bg1:#fff;--bgi:#f2f2f5;--brd:#e6e6eb;--brdf:#4A8FD4;
+  --t1:#111118;--t2:#6b6b76;--t3:#9d9da8;
+  --shc:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03);
+  --shh:0 8px 24px rgba(0,0,0,.06),0 2px 6px rgba(0,0,0,.03);
+  --di:#fafafe;--db:#ebebf0;--fc:#fff;--cb:#f5f5f8;
+  --mb:#ebebf0;--mon:#111118;--mot:#fff;--mt:#8a8a94;
+  --pb:#fff;--pbb:#e0e0e6;
+  --rpb:rgba(212,115,82,.06);--rpbr:rgba(212,115,82,.15);--rpt:#D47352;
+  --tb:#d8d8de;--tk:#fff;--to:#111118;
+  --grn:#3d9952;--red:#d44040;--blu:#4A8FD4;--pur:#9B6DB5;--orn:#D4945C;--ylw:#c89520;
+  --card-bg:#fff;--card-brd:#e6e6eb;
+}
+.app[data-theme="dark"]{
+  --bg0:#131316;--bg1:#1a1a1f;--bgi:#1e1e23;--brd:#2a2a32;--brdf:#6AAAE0;
+  --t1:#ededf0;--t2:#8a8a96;--t3:#55555e;
+  --shc:0 1px 3px rgba(0,0,0,.2);--shh:0 8px 24px rgba(0,0,0,.3);
+  --di:#1a1a1f;--db:#2a2a32;--fc:#1a1a1f;--cb:#16161a;
+  --mb:#222228;--mon:#fff;--mot:#111;--mt:#6a6a76;
+  --pb:#1e1e23;--pbb:#2a2a32;
+  --rpb:rgba(224,147,122,.06);--rpbr:rgba(224,147,122,.18);--rpt:#E0937A;
+  --tb:#333;--tk:#444;--to:#fff;
+  --grn:#6FC482;--red:#e06060;--blu:#6AAAE0;--pur:#B48BCC;--orn:#D4945C;--ylw:#d4a840;
+  --card-bg:#1a1a1f;--card-brd:#2a2a32;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body,#root{font-family:'DM Sans',sans-serif;min-height:100vh;background:#f8f8fa}
+
+/* ─ App shell ─ */
+.app{max-width:1320px;margin:0 auto;padding:40px 32px;min-height:100vh;background:var(--bg0);transition:background .3s,color .3s;color:var(--t1)}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px}
+.hdr-l{display:flex;flex-direction:column;gap:6px}
+.hdr h1{font-family:'DM Sans',sans-serif;font-size:26px;font-weight:700;letter-spacing:-.5px;color:var(--t1)}
+.hdr p{color:var(--t2);font-size:14px;font-weight:400;letter-spacing:-.1px}
+.hdr-r{display:flex;align-items:center;gap:14px}
+.export-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;border:1px solid var(--brd);background:var(--bg1);color:var(--t1);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.export-btn:hover{background:var(--mon);color:var(--mot);border-color:var(--mon);box-shadow:var(--shh)}
+.export-btn:disabled{opacity:.6;cursor:wait}
+.export-btn .spin{animation:espin .8s linear infinite}@keyframes espin{to{transform:rotate(360deg)}}
+
+/* ─ Theme toggle ─ */
+.tt{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.tt-l{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.tt-s{width:44px;height:24px;border-radius:12px;background:var(--tb);position:relative;transition:background .3s;border:1px solid var(--brd)}
+.tt-s.on{background:var(--to);border-color:var(--to)}
+.tt-s::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:9px;background:var(--tk);transition:transform .3s,background .3s;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tt-s.on::after{transform:translateX(20px);background:#fff}
+
+/* ─ Palette ─ */
+.pal{display:flex;gap:8px;justify-content:center;margin-bottom:28px;flex-wrap:wrap}
+.pal-b{display:flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;border:1px solid var(--pbb);background:var(--pb);color:var(--t1);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:grab;transition:all .2s;user-select:none}
+.pal-b:hover{transform:translateY(-1px);box-shadow:var(--shh)}.pal-b:active{cursor:grabbing;transform:scale(.97)}.pal-b.off{opacity:.2;pointer-events:none;filter:grayscale(1)}
+.pal-h{width:100%;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);margin-top:2px;letter-spacing:.3px}
+
+/* ─ Mode bar ─ */
+.mb{display:flex;justify-content:center;gap:2px;margin-bottom:28px;background:var(--mb);border-radius:10px;padding:3px;width:fit-content;margin-left:auto;margin-right:auto}
+.mb-b{padding:8px 22px;border-radius:8px;border:none;background:transparent;color:var(--mt);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.mb-b.on{background:var(--mon);color:var(--mot);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.rpf-w{text-align:center;margin-bottom:24px}
+.rpf{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;background:var(--rpb);border:1px solid var(--rpbr);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--rpt);letter-spacing:.2px}
+
+/* ─ Chain canvas ─ */
+.co{margin-bottom:32px;border-radius:14px;background:var(--cb);border:1px solid var(--brd);transition:all .25s;position:relative}
+.co::-webkit-scrollbar{height:6px}.co::-webkit-scrollbar-track{background:transparent;margin:0 12px}.co::-webkit-scrollbar-thumb{background:var(--t3);border-radius:3px}.co::-webkit-scrollbar-thumb:hover{background:var(--t2)}
+.co.drop{border-color:var(--brdf)}
+.ci{display:flex;align-items:flex-start;padding:28px 24px;transform-origin:top left;transition:transform .3s ease}
+.cw{display:flex;align-items:flex-start;flex-shrink:0;animation:ci .35s ease both}
+@keyframes ci{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.cn{display:flex;align-items:center;height:90px;flex-shrink:0}
+
+/* ─ Cards ─ */
+.cd{width:290px;border-radius:14px;transition:all .22s cubic-bezier(.4,0,.2,1);flex-shrink:0;position:relative;overflow:hidden;box-shadow:var(--shc)}
+.cd:hover{transform:translateY(-3px);box-shadow:var(--shh)}.cd.dg{opacity:.35;transform:scale(.9) rotate(-1deg)}.cd.dov{transform:translateY(-2px);box-shadow:var(--shh)}
+.cd-wm{position:absolute;right:-10px;bottom:-10px;width:90px;height:90px;opacity:.07;pointer-events:none}
+.cd-h{display:flex;align-items:center;gap:8px;padding:16px 16px 8px;cursor:grab;user-select:none;position:relative;z-index:1}.cd-h:active{cursor:grabbing}
+.cd-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cd-nm{flex:1;background:transparent;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;outline:none;padding:4px 8px;border-radius:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;transition:background .2s}
+.cd-nm:hover{background:rgba(255,255,255,.08)}.cd-nm:focus{background:rgba(255,255,255,.12);box-shadow:0 0 0 1px rgba(255,255,255,.2)}
+.cd-acts{display:flex;gap:2px;flex-shrink:0;position:relative;z-index:1}
+.cd-ab{width:26px;height:26px;border-radius:7px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s;flex-shrink:0;background:transparent}
+.cd-ab:hover{background:rgba(255,255,255,.15)}
+.cd-ab.del:hover{background:rgba(255,82,82,.2)}
+
+/* ─ Card body ─ */
+.cd-b{padding:0 16px 18px;position:relative;z-index:1;overflow:hidden;transition:max-height .25s ease,opacity .2s ease}
+.cd-b.collapsed{max-height:0!important;opacity:0;padding-top:0;padding-bottom:0}
+.si{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;margin-bottom:8px;letter-spacing:.8px;text-transform:uppercase}
+.fr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.fr:last-child{margin-bottom:0}
+.fl{font-size:13px;white-space:nowrap;font-weight:500;font-family:'DM Sans',sans-serif}
+.fi{width:88px;padding:7px 10px;border-radius:8px;border:1px solid;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;text-align:right;transition:all .2s;-moz-appearance:textfield}
+.fi:focus{box-shadow:0 0 0 2px rgba(74,143,212,.15)}.fi::-webkit-outer-spin-button,.fi::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.fi:focus::-webkit-outer-spin-button,.fi:focus::-webkit-inner-spin-button{-webkit-appearance:inner-spin-button}
+.fu{font-size:11px;font-family:'JetBrains Mono',monospace;min-width:16px;opacity:.45}
+.bdg{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-top:10px}
+.ct{padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+.ct.on{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.35)}
+.cs{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;color:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,.5)'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.lc{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}.bp{display:flex;gap:4px;margin-bottom:10px}
+
+/* ─ Dashboard ─ */
+.dash{border-radius:14px;border:1px solid var(--brd);background:var(--bg1);padding:32px;margin-bottom:24px;box-shadow:var(--shc)}
+.dash-title{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:800;color:var(--t1);margin-bottom:28px;letter-spacing:-.4px}
+.dash-group{margin-bottom:28px}
+.dash-group:last-child{margin-bottom:0}
+.dash-group-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--t3);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:8px}
+.dash-group-label::before{content:'';width:3px;height:12px;border-radius:2px;flex-shrink:0}
+.dash-group:nth-child(1) .dash-group-label::before{background:var(--blu)}
+.dash-group:nth-child(2) .dash-group-label::before{background:var(--orn)}
+.dash-group:nth-child(3) .dash-group-label::before{background:var(--grn)}
+.rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.ri{padding:18px 20px;border-radius:12px;background:var(--di);border:1px solid var(--db);transition:all .2s;position:relative;overflow:hidden}
+.ri:hover{transform:translateY(-2px);box-shadow:var(--shh)}
+.ri::before{content:'';position:absolute;top:0;left:0;width:3px;bottom:0;border-radius:2px 0 0 2px;opacity:.5;transition:opacity .2s}.ri:hover::before{opacity:1}
+.ri-or::before{background:var(--orn)}.ri-bl::before{background:var(--blu)}.ri-gr::before{background:var(--grn)}.ri-pu::before{background:var(--pur)}.ri-rd::before{background:var(--red)}.ri-yl::before{background:var(--ylw)}.ri-n::before{background:var(--t3)}
+.rl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--t2);font-weight:500;font-family:'JetBrains Mono',monospace;margin-bottom:10px}
+.rv{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;letter-spacing:-.5px;color:var(--t1)}
+.ru{font-size:10px;color:var(--t3);margin-left:4px;font-weight:500}
+.inertia-health{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;margin-top:8px}
+.ih-good{background:rgba(61,153,82,.1);color:var(--grn)}.ih-warn{background:rgba(200,149,32,.1);color:var(--ylw)}.ih-bad{background:rgba(212,64,64,.1);color:var(--red)}
+
+/* ─ Calc path ─ */
+.fc{border-radius:14px;border:1px solid var(--brd);background:var(--fc);padding:28px;margin-bottom:24px;box-shadow:var(--shc)}
+.fc h3{font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;color:var(--t1);margin-bottom:18px;letter-spacing:-.3px}
+.fc-tabs{display:flex;gap:4px;margin-bottom:20px}
+.fc-tab{padding:7px 16px;border-radius:8px;border:1px solid var(--brd);background:transparent;color:var(--t2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.fc-tab.on{background:var(--mon);color:var(--mot);border-color:var(--mon)}
+.fln{display:grid;grid-template-columns:200px 1fr auto;gap:12px;padding:9px 12px;margin:0 -12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;align-items:baseline;transition:background .15s}
+.fln:hover{background:var(--di)}
+.fln+.fln{border-top:1px solid var(--brd)}
+.fln-sec{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--t1);padding:14px 0 6px;margin-top:4px;letter-spacing:-.1px}
+.fln-sec:first-child{padding-top:0;margin-top:0}
+
+/* Table section groups */
+.tbl-group{margin-bottom:16px;border-radius:10px;background:var(--di);border:1px solid var(--db);overflow:hidden}
+.tbl-group:last-child{margin-bottom:0}
+.tbl-group-hdr{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--t1);padding:10px 16px;background:var(--bgi);border-bottom:1px solid var(--db);letter-spacing:-.1px}
+.tbl-group-body{padding:4px 4px}
+.tbl-group .fln{margin:0;padding:8px 12px;border-radius:6px}
+.tbl-group .fln+.fln{border-top:none}
+.tbl-group .fln:hover{background:var(--bg1)}
+
+/* Equation sections */
+.eq-sections{display:flex;flex-direction:column;gap:0}
+.eq-hr{border:none;height:1px;background:linear-gradient(90deg,transparent,var(--brd) 15%,var(--brd) 85%,transparent);margin:6px 0}
+.eq-block{border-radius:10px;background:var(--di);border:1px solid var(--db);padding:16px 20px;overflow-x:auto}
+.eq-block-title{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;letter-spacing:-.1px}
+.eq-block .katex{font-size:.95em}
+.eq-block .katex .textbf{font-size:1.05em}
+.fla{color:var(--t1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.flf{color:var(--t3);font-size:10.5px}
+.flv{color:var(--t1);font-weight:700;text-align:right;white-space:nowrap}
+.vp{display:inline-block;padding:2px 8px;border-radius:5px;font-weight:700;font-size:inherit;line-height:1.4;letter-spacing:-.2px}
+.vp-ratio{background:rgba(74,143,212,.12);color:var(--blu)}
+.vp-eff{background:rgba(61,153,82,.12);color:var(--grn)}
+.vp-travel{background:rgba(155,109,181,.12);color:var(--pur)}
+.vp-mrl{background:rgba(212,148,92,.12);color:var(--orn)}
+.vp-speed{background:rgba(72,136,200,.12);color:var(--blu)}
+.vp-enc{background:rgba(168,125,72,.1);color:var(--orn)}
+.katex-wrap{overflow-x:auto;padding:4px 0}
+.katex-wrap .katex{font-size:.95em}
+
+@media(max-width:700px){
+  .app{padding:24px 16px}
+  .rg{grid-template-columns:1fr}
+  .cd{width:230px}
+  .fln{grid-template-columns:1fr}
+  .hdr{flex-direction:column;text-align:center;gap:12px}
+  .hdr-r{justify-content:center}
+}
+`;
+
+// ─── Subcomponents ────────────────────────────────────────────────
+function Conn({dark}){
+  const c1=dark?"#333":"#d0d0d6",c2=dark?"#555":"#aaa";
+  return(
+    <div className="cn"><svg width="52" height="90" viewBox="0 0 52 90"><defs><linearGradient id="cg" x1="0" y1="0" x2="52" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor={c1}/><stop offset="50%" stopColor={c2}/><stop offset="100%" stopColor={c1}/></linearGradient></defs><line x1="0" y1="45" x2="44" y2="45" stroke="url(#cg)" strokeWidth="1.5" strokeDasharray="6,4"><animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.5s" repeatCount="indefinite"/></line><polygon points="42,40 52,45 42,50" fill={c2}/></svg></div>
+  );
+}
+
+function NI({value,onChange,width,step,min,max,theme:t}){
+  const[loc,setLoc]=useState(String(value??""));const[foc,setFoc]=useState(false);
+  useEffect(()=>{if(!foc)setLoc(String(value??""))},[value,foc]);
+  return(
+    <input className="fi" type="number" value={foc?loc:(value??"")} step={step} min={min} max={max} style={{width:width||80,background:t.inBg,borderColor:t.inBrd,color:t.inTxt}} onFocus={()=>{setLoc(String(value??""));setFoc(true)}} onBlur={()=>setFoc(false)} onChange={e=>{const r=e.target.value;setLoc(r);if(r!==""&&r!=="-"&&r!=="."){const x=parseFloat(r);if(!isNaN(x))onChange(x)}else onChange("")}}/>
+  );
+}
+
+function Card({comp:c,index:i,isLast,outputMode:om,lin,onLin,onUp,onDel,onDup,onDS,onDE,onDO,onDr,isDg,isDov,dark,collapsed,onToggle}){
+  const isS=c.type===T.SERVO,isRP=c.type===T.RACK_PINION,isBP=c.type===T.BELT_PULLEY;
+  const t=(dark?CTD:CT)[c.type];const set=(k,v)=>onUp(c.id,{[k]:v});
+  return(
+    <div className={`cd ${isDg?"dg":""} ${isDov?"dov":""}`} draggable={!isS}
+      style={{background:`linear-gradient(135deg,${t.bg},${t.bg2})`,color:t.text,border:dark?`1px solid ${t.inBrd}`:"1px solid transparent"}}
+      onDragStart={e=>onDS(e,i)} onDragEnd={onDE} onDragOver={e=>onDO(e,i)} onDrop={e=>onDr(e,i)}>
+      <div className="cd-wm" style={{color:t.text}} dangerouslySetInnerHTML={{__html:WM[c.type]}}/>
+      <div className="cd-h">
+        <div className="cd-ic" style={{background:t.badge}}>{IC[c.type](t.icon)}</div>
+        <input className="cd-nm" value={c.name} onChange={e=>set("name",e.target.value)} spellCheck={false} style={{color:t.text}}/>
+        <div className="cd-acts">
+          <button className="cd-ab" onClick={onToggle} title={collapsed?"Expand":"Collapse"} style={{color:t.sub,fontSize:10}}>{collapsed?"▼":"▲"}</button>
+          {!isS&&<button className="cd-ab" onClick={()=>onDup(c)} title="Duplicate" style={{color:t.sub}}>⧉</button>}
+          {!isS&&<button className="cd-ab del" onClick={()=>onDel(c.id)} title="Remove" style={{color:t.sub}}>✕</button>}
+        </div>
+      </div>
+      <div className={`cd-b ${collapsed?"collapsed":""}`} style={collapsed?{maxHeight:0}:{maxHeight:500}}>
+        <div className="si" style={{color:t.sub}}>{isS?"DRIVE":`STAGE ${i}`}{isLast&&!isS?(isRP?" · LINEAR OUTPUT":" · OUTPUT"):""}</div>
+        {isS&&(<>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Encoder PPR</span><NI value={c.encoderPPR} min={1} onChange={v=>set("encoderPPR",v)} theme={t}/></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Rated Torque</span><NI value={c.ratedTorqueNm} min={0} step={0.1} onChange={v=>set("ratedTorqueNm",v)} theme={t}/><span className="fu" style={{color:t.sub}}>Nm</span></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Rated Speed</span><NI value={c.ratedSpeedRPM} min={0} step={100} onChange={v=>set("ratedSpeedRPM",v)} theme={t}/><span className="fu" style={{color:t.sub}}>RPM</span></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Rotor Inertia</span><NI value={c.rotorInertia} min={0} step={0.1} onChange={v=>set("rotorInertia",v)} theme={t}/><span className="fu" style={{color:t.sub}}>kg·cm²</span></div>
+        </>)}
+        {c.type===T.GEARBOX&&(<>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Ratio</span><div style={{display:"flex",alignItems:"center",gap:4}}><NI value={c.ratioNum} min={1} width={50} onChange={v=>set("ratioNum",v)} theme={t}/><span className="fu" style={{color:t.sub}}>:</span><NI value={c.ratioDen} min={1} width={50} onChange={v=>set("ratioDen",v)} theme={t}/></div></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Efficiency</span><NI value={c.efficiency} min={0} max={100} step={0.5} onChange={v=>set("efficiency",v)} theme={t}/><span className="fu" style={{color:t.sub}}>%</span></div>
+        </>)}
+        {c.type===T.GEAR_MESH&&(<>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Driving Teeth</span><NI value={c.drivingTeeth} min={1} onChange={v=>set("drivingTeeth",v)} theme={t}/><span className="fu" style={{color:t.sub}}>T</span></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Driven Teeth</span><NI value={c.drivenTeeth} min={1} onChange={v=>set("drivenTeeth",v)} theme={t}/><span className="fu" style={{color:t.sub}}>T</span></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Efficiency</span><NI value={c.efficiency} min={0} max={100} step={0.5} onChange={v=>set("efficiency",v)} theme={t}/><span className="fu" style={{color:t.sub}}>%</span></div>
+        </>)}
+        {isBP&&(<>
+          <div className="bp"><button className={`ct ${c.bpMode==="teeth"?"on":""}`} style={{flex:1,color:t.text}} onClick={()=>set("bpMode","teeth")}>By Teeth</button><button className={`ct ${c.bpMode==="diameter"?"on":""}`} style={{flex:1,color:t.text}} onClick={()=>set("bpMode","diameter")}>By Diameter</button></div>
+          {c.bpMode==="teeth"?(<><div className="fr"><span className="fl" style={{color:t.sub}}>Driving Teeth</span><NI value={c.drivingTeeth} min={1} onChange={v=>set("drivingTeeth",v)} theme={t}/><span className="fu" style={{color:t.sub}}>T</span></div><div className="fr"><span className="fl" style={{color:t.sub}}>Driven Teeth</span><NI value={c.drivenTeeth} min={1} onChange={v=>set("drivenTeeth",v)} theme={t}/><span className="fu" style={{color:t.sub}}>T</span></div></>):(<><div className="fr"><span className="fl" style={{color:t.sub}}>Driving ⌀</span><NI value={c.drivingDia} min={0.01} step={0.01} onChange={v=>set("drivingDia",v)} theme={t}/></div><div className="fr"><span className="fl" style={{color:t.sub}}>Driven ⌀</span><NI value={c.drivenDia} min={0.01} step={0.01} onChange={v=>set("drivenDia",v)} theme={t}/></div></>)}
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Efficiency</span><NI value={c.efficiency} min={0} max={100} step={0.5} onChange={v=>set("efficiency",v)} theme={t}/><span className="fu" style={{color:t.sub}}>%</span></div>
+        </>)}
+        {isRP&&(<>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Pinion Teeth</span><NI value={c.pinionTeeth} min={1} onChange={v=>set("pinionTeeth",v)} theme={t}/><span className="fu" style={{color:t.sub}}>T</span></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Pitch</span><NI value={c.pinionPitch} min={0.001} step={0.001} onChange={v=>set("pinionPitch",v)} theme={t}/><span className="fu" style={{color:t.sub}}>{c.rpUnit}</span></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Units</span><div style={{display:"flex",gap:4}}>{["in","mm"].map(u=><button key={u} className={`ct ${c.rpUnit===u?"on":""}`} style={{padding:"4px 12px",fontSize:10,color:t.text}} onClick={()=>set("rpUnit",u)}>{u}</button>)}</div></div>
+          <div className="fr"><span className="fl" style={{color:t.sub}}>Efficiency</span><NI value={c.efficiency} min={0} max={100} step={0.5} onChange={v=>set("efficiency",v)} theme={t}/><span className="fu" style={{color:t.sub}}>%</span></div>
+        </>)}
+        {!isS&&<div className="bdg" style={{background:t.badge,color:t.text}}>{badge(c)}</div>}
+        {isLast&&!isS&&!isRP&&om==="linear"&&(
+          <div className="lc">
+            <div className="si" style={{color:t.text,marginBottom:6}}>LOAD COUPLING</div>
+            <div className="fr" style={{marginBottom:10}}><select className="cs" value={lin.device} onChange={e=>onLin({...lin,device:e.target.value})}><option value={OD.SPROCKET}>Sprocket / Gear (Pitch × Teeth)</option><option value={OD.DIRECT}>Direct Diameter (π × D)</option></select></div>
+            {lin.device===OD.SPROCKET?(<><div className="fr"><span className="fl" style={{color:t.sub}}>Pitch</span><NI value={lin.pitch} min={0.001} step={0.001} onChange={v=>onLin({...lin,pitch:typeof v==="number"?v:0})} theme={t}/><span className="fu" style={{color:t.sub}}>{lin.unit}</span></div><div className="fr"><span className="fl" style={{color:t.sub}}>Teeth</span><NI value={lin.teeth} min={1} onChange={v=>onLin({...lin,teeth:typeof v==="number"?v:0})} theme={t}/><span className="fu" style={{color:t.sub}}>T</span></div></>):(<div className="fr"><span className="fl" style={{color:t.sub}}>Diameter</span><NI value={lin.diameter} min={0.001} step={0.01} onChange={v=>onLin({...lin,diameter:typeof v==="number"?v:0})} theme={t}/><span className="fu" style={{color:t.sub}}>{lin.unit}</span></div>)}
+            <div className="fr" style={{marginTop:4}}><span className="fl" style={{color:t.sub}}>Units</span><div style={{display:"flex",gap:4}}>{["in","mm"].map(u=><button key={u} className={`ct ${lin.unit===u?"on":""}`} style={{padding:"4px 12px",fontSize:10,color:t.text}} onClick={()=>onLin({...lin,unit:u})}>{u}</button>)}</div></div>
+          </div>
+        )}
+        {isLast&&!isS&&(
+          <div className="lc">
+            <div className="si" style={{color:t.text,marginBottom:6}}>LOAD INERTIA</div>
+            <div className="fr"><span className="fl" style={{color:t.sub}}>J Load</span><NI value={c.loadInertia!=null?c.loadInertia:5} min={0} step={0.1} onChange={v=>set("loadInertia",v)} theme={t}/><span className="fu" style={{color:t.sub}}>kg·cm²</span></div>
+          </div>
+        )}
+      </div>
+    </div>);
+}
+
+// ─── Chain Canvas ─────────────────────────────────────────────────
+function ChainCanvas(p){
+  const outerRef=useRef(null),measureRef=useRef(null);
+  const[scale,setScale]=useState(1);const[h,setH]=useState(230);const[needsScroll,setNeedsScroll]=useState(false);
+  const sig=JSON.stringify({
+    chain:p.chain,collapsed:p.collapsed,eMode:p.eMode,linDev:p.lin.device,linUnit:p.lin.unit,lastIdx:p.lastIdx,
+  });
+  useEffect(()=>{const t=setTimeout(()=>{if(!outerRef.current||!measureRef.current)return;const ow=outerRef.current.clientWidth-48,cw=measureRef.current.scrollWidth,ch=measureRef.current.scrollHeight;let s=1;if(cw>ow&&cw>0)s=Math.max(0.7,ow/cw);const willScroll=cw*s>ow;setScale(s);setNeedsScroll(willScroll);setH(Math.max(180,ch*s+(willScroll?72:56)))},80);return()=>clearTimeout(t)},[sig]);
+  return(
+    <div ref={outerRef} className={`co ${p.dropOn?"drop":""}`} style={{height:h,transition:"height .3s ease",overflowX:needsScroll?"auto":"hidden",overflowY:"hidden"}}
+      onDragOver={e=>{if(e.dataTransfer.types.includes("text/palette-type")){e.preventDefault();p.setDropOn(true)}}} onDragLeave={()=>p.setDropOn(false)}
+      onDrop={e=>{e.preventDefault();p.setDropOn(false);const t=e.dataTransfer.getData("text/palette-type");if(t&&DEFS[t])p.add(t)}}>
+      <div ref={measureRef} style={{position:"absolute",visibility:"hidden",pointerEvents:"none",display:"flex",alignItems:"flex-start",padding:"28px 24px",left:0,top:0,whiteSpace:"nowrap"}}>
+        {p.chain.map((c,i)=><div key={c.id} className="cw">{i>0&&<Conn dark={p.dark}/>}<Card comp={c} index={i} isLast={i===p.lastIdx} outputMode={p.eMode} lin={p.lin} onLin={p.setLin} onUp={p.up} onDel={()=>{}} onDup={()=>{}} onDS={()=>{}} onDE={()=>{}} onDO={()=>{}} onDr={()=>{}} isDg={false} isDov={false} dark={p.dark} collapsed={!!p.collapsed[c.id]} onToggle={()=>{}}/></div>)}
+      </div>
+      <div className="ci" style={{transform:`scale(${scale})`,transformOrigin:"top left",transition:"transform .3s ease",width:needsScroll?`${100/scale}%`:"auto"}}>
+        {p.chain.map((c,i)=><div key={c.id} className="cw">{i>0&&<Conn dark={p.dark}/>}<Card comp={c} index={i} isLast={i===p.lastIdx} outputMode={p.eMode} lin={p.lin} onLin={p.setLin} onUp={p.up} onDel={p.del} onDup={p.dup} onDS={p.onDS} onDE={p.onDE} onDO={p.onDO} onDr={p.onDr} isDg={p.dIdx===i} isDov={p.doIdx===i} dark={p.dark} collapsed={!!p.collapsed[c.id]} onToggle={()=>p.toggleCol(c.id)}/></div>)}
+      </div>
+    </div>);
+}
+
+// ─── App ──────────────────────────────────────────────────────────
+export default function App(){
+  const[chain,setChain]=useState(defChain);
+  const[mode,setMode]=useState("rotary");
+  const[lin,setLin]=useState({device:OD.SPROCKET,pitch:0.5,teeth:12,diameter:2.5,unit:"in"});
+  const[dIdx,setDIdx]=useState(null);const[doIdx,setDoIdx]=useState(null);
+  const[dropOn,setDropOn]=useState(false);const[dark,setDark]=useState(false);
+  const[collapsed,setCollapsed]=useState({});
+  const[calcTab,setCalcTab]=useState("table");
+  const[exporting,setExporting]=useState(false);
+
+  const rp=anyRP(chain),rpF=lastRP(chain),eM=rpF?"linear":mode;
+
+  const toggleCol=useCallback(id=>setCollapsed(p=>({...p,[id]:!p[id]})),[]);
+
+  const add=t=>{if(rp)return;const d=DEFS[t],same=chain.filter(c=>c.type===t);let nm;if(same.length===0)nm=d.label;else{if(same.length===1&&same[0].name===d.label)up(same[0].id,{name:`${d.label} 1`});nm=`${d.label} ${same.length+1}`}setChain(p=>[...p,{id:uid(),type:t,...d.defaults,name:nm}])};
+  const up=(id,u)=>setChain(p=>p.map(c=>c.id===id?{...c,...u}:c));
+  const del=id=>setChain(p=>p.filter(c=>c.id!==id));
+  const dup=comp=>{if(rp)return;const nc={...comp,id:uid(),name:comp.name+" Copy"};setChain(p=>{const i=p.findIndex(c=>c.id===comp.id);const next=[...p];next.splice(i+1,0,nc);return next})};
+
+  const onDS=(e,i)=>{if(i===0){e.preventDefault();return}setDIdx(i);e.dataTransfer.setData("text/card-reorder","1");e.dataTransfer.effectAllowed="move"};
+  const onDE=()=>{setDIdx(null);setDoIdx(null)};
+  const onDO=(e,i)=>{e.preventDefault();if(i>0)setDoIdx(i)};
+  const onDr=(e,i)=>{e.preventDefault();if(dIdx==null||i===0||dIdx===0)return;setChain(p=>{const x=[...p];const[m]=x.splice(dIdx,1);x.splice(i,0,m);return x});setDIdx(null);setDoIdx(null)};
+  const palDS=(e,t)=>{if(rp)return;e.dataTransfer.setData("text/palette-type",t);e.dataTransfer.effectAllowed="copy"};
+
+  const lastIdx=(()=>{for(let i=chain.length-1;i>=0;i--)if(chain[i].type!==T.SERVO)return i;return-1})();
+  const loadJ=lastIdx>=0?(chain[lastIdx].loadInertia!=null?n(chain[lastIdx].loadInertia,5):5):5;
+
+  const r=useMemo(()=>compute(chain,eM,lin,loadJ),[chain,eM,lin,loadJ]);
+  const fl=useMemo(()=>buildLines(chain,eM,lin,r),[chain,eM,lin,r]);
+  const latex=useMemo(()=>buildLatex(chain,eM,lin,r),[chain,eM,lin,r]);
+  const latexSections=useMemo(()=>buildLatexSections(chain,eM,lin,r),[chain,eM,lin,r]);
+  const fmt=(v,d=4)=>{if(v==null||isNaN(v))return"—";if(Math.abs(v)>=10000)return v.toLocaleString(undefined,{maximumFractionDigits:2});return parseFloat(v.toFixed(d)).toString()};
+
+  const pals=[{type:T.GEARBOX,label:"+ Gearbox"},{type:T.GEAR_MESH,label:"+ Gear Mesh"},{type:T.BELT_PULLEY,label:"+ Belt / Pulley"},{type:T.RACK_PINION,label:"+ Rack & Pinion"}];
+
+  const irClass=r&&r.jMotor>0?(r.inertiaRatio<=10?"ih-good":r.inertiaRatio<=25?"ih-warn":"ih-bad"):"";
+  const irLabel=r&&r.jMotor>0?(r.inertiaRatio<=10?"✓ Good":r.inertiaRatio<=25?"⚠ Marginal":"✕ High"):"";
+
+  return(<><style>{CSS}</style>
+  <div className="app" data-theme={dark?"dark":"light"}>
+    <div className="hdr">
+      <div className="hdr-l">
+        <h1>Servo Scaling Calculator</h1>
+        <p>Visual geartrain builder with live axis parameter computation</p>
+      </div>
+      <div className="hdr-r">
+        {r&&<button className="export-btn" disabled={exporting} onClick={()=>buildPDFReport(chain,r,fl,latex,fmt,setExporting,latexSections)}>
+          {exporting ? <><svg className="spin" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10" cy="10" r="7" strokeDasharray="30 14" strokeLinecap="round"/></svg>Generating…</> : <><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14l4 4 4-4M10 18V8M3 4h14"/></svg>Export PDF</>}
+        </button>}
+        <div className="tt" onClick={()=>setDark(!dark)}><span className="tt-l">{dark?"Dark":"Light"}</span><div className={`tt-s ${dark?"on":""}`}/></div>
+      </div>
+    </div>
+
+    <div className="pal">{pals.map(({type,label})=><div key={type} className={`pal-b ${rp?"off":""}`} draggable={!rp} onClick={()=>add(type)} onDragStart={e=>palDS(e,type)}><span className="pal-icon">{IC[type](rp?"#999":(dark?CTD:CT)[type].accent)}</span><span>{label}</span></div>)}
+      {rp&&<div className="pal-h">Remove Rack & Pinion to add more stages</div>}</div>
+
+    {rpF?<div className="rpf-w"><span className="rpf">{IC[T.RACK_PINION](dark?"#E0937A":"#D47352")} Rack & Pinion — linear output forced</span></div>
+    :<div className="mb"><button className={`mb-b ${mode==="rotary"?"on":""}`} onClick={()=>setMode("rotary")}>Rotary (deg)</button><button className={`mb-b ${mode==="linear"?"on":""}`} onClick={()=>setMode("linear")}>Linear</button></div>}
+
+    <ChainCanvas chain={chain} dark={dark} lastIdx={lastIdx} eMode={eM} lin={lin} setLin={setLin} up={up} del={del} dup={dup} onDS={onDS} onDE={onDE} onDO={onDO} onDr={onDr} dIdx={dIdx} doIdx={doIdx} dropOn={dropOn} setDropOn={setDropOn} add={add} collapsed={collapsed} toggleCol={toggleCol}/>
+
+    {r&&<div className="dash">
+      <div className="dash-title">Axis Scaling Results</div>
+
+      {/* Group 1: Encoder & Resolution */}
+      <div className="dash-group">
+        <div className="dash-group-label">Encoder & Resolution</div>
+        <div className="rg">
+          <div className="ri ri-or"><div className="rl">Motor Rev / Load Rev</div><div className="rv" style={{color:"var(--orn)"}}>{fmt(r.mrl)}</div></div>
+          <div className="ri ri-gr"><div className="rl">Counts / Load Rev</div><div className="rv" style={{color:"var(--grn)"}}>{fmt(r.cpl,0)}</div></div>
+          <div className="ri ri-bl"><div className="rl">{r.u} / Motor Rev</div><div className="rv" style={{color:"var(--blu)"}}>{fmt(r.upm,6)}<span className="ru">{r.u}</span></div></div>
+          <div className="ri ri-pu"><div className="rl">{r.u} / Count</div><div className="rv" style={{color:"var(--pur)"}}>{fmt(r.upc,8)}<span className="ru">{r.u}</span></div></div>
+          <div className="ri ri-n"><div className="rl">{r.u} / Load Rev</div><div className="rv">{fmt(r.dpl,6)}<span className="ru">{r.u}</span></div></div>
+        </div>
+      </div>
+
+      {/* Group 2: Torque & Speed */}
+      <div className="dash-group">
+        <div className="dash-group-label">Torque & Speed</div>
+        <div className="rg">
+          <div className="ri ri-or"><div className="rl">Output Torque (w/ eff.)</div><div className="rv" style={{color:"var(--orn)"}}>{fmt(r.tq,2)}<span className="ru">Nm</span></div></div>
+          <div className="ri ri-bl"><div className="rl">Output Shaft Speed</div><div className="rv" style={{color:"var(--blu)"}}>{fmt(r.oRPM,2)}<span className="ru">RPM</span></div></div>
+          {r.u!=="deg"&&<div className="ri ri-pu"><div className="rl">Output Linear Speed</div><div className="rv" style={{color:"var(--pur)"}}>{fmt(r.oSpd,2)}<span className="ru">{r.u}/min</span></div></div>}
+          <div className="ri ri-n"><div className="rl">Total Gear Ratio</div><div className="rv">{fmt(r.tr)}<span className="ru">:1</span></div></div>
+          <div className="ri ri-gr"><div className="rl">Combined Efficiency</div><div className="rv" style={{color:r.te>.9?"var(--grn)":"var(--red)"}}>{fmt(r.te*100,1)}<span className="ru">%</span></div></div>
+        </div>
+      </div>
+
+      {/* Group 3: Inertia */}
+      {r.jMotor>0&&<div className="dash-group">
+        <div className="dash-group-label">Inertia Matching</div>
+        <div className="rg">
+          <div className={`ri ${r.inertiaRatio<=10?"ri-gr":r.inertiaRatio<=25?"ri-yl":"ri-rd"}`}><div className="rl">Inertia Ratio (J_load / J_motor)</div><div className="rv" style={{color:r.inertiaRatio<=10?"var(--grn)":r.inertiaRatio<=25?"var(--ylw)":"var(--red)"}}>{fmt(r.inertiaRatio,2)}<span className="ru">:1</span></div><div className={`inertia-health ${irClass}`}>{irLabel}</div></div>
+          <div className="ri ri-n"><div className="rl">Reflected Load Inertia</div><div className="rv">{fmt(r.jReflected,4)}<span className="ru">kg·cm²</span></div></div>
+        </div>
+      </div>}
+    </div>}
+
+    <div className="fc">
+      <h3>Calculation Path</h3>
+      <div className="fc-tabs"><button className={`fc-tab ${calcTab==="table"?"on":""}`} onClick={()=>setCalcTab("table")}>Table</button><button className={`fc-tab ${calcTab==="katex"?"on":""}`} onClick={()=>setCalcTab("katex")}>Equation</button></div>
+      {calcTab==="table"?(()=>{
+        // Group lines by section
+        const groups=[];let cur=null;
+        fl.forEach(x=>{if(x.section){cur={title:x.section,rows:[]};groups.push(cur)}else if(cur)cur.rows.push(x)});
+        return groups.map((g,gi)=><div key={gi} className="tbl-group">
+          <div className="tbl-group-hdr">{g.title}</div>
+          <div className="tbl-group-body">{g.rows.map((x,i)=><div key={i} className="fln"><span className="fla">{x.l}</span>{x.raw?<span className="flf" dangerouslySetInnerHTML={{__html:x.m}}/>:<span className="flf">{x.m}</span>}{x.raw?<span className="flv" dangerouslySetInnerHTML={{__html:'= '+x.v}}/>:<span className="flv">= {x.v}</span>}</div>)}</div>
+        </div>)
+      })()
+      :<div className="eq-sections">{latexSections.map((s,i)=><div key={i}>{i>0&&<hr className="eq-hr"/>}<div className="eq-block"><div className="eq-block-title">{s.title}</div><Katex tex={s.tex}/></div></div>)}</div>}
+    </div>
+  </div></>);
+}

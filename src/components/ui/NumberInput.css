@@ -1,0 +1,27 @@
+.fi {
+  width: 88px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  outline: none;
+  text-align: right;
+  transition: all 0.2s;
+  -moz-appearance: textfield;
+}
+
+.fi:focus {
+  box-shadow: 0 0 0 2px rgba(74, 143, 212, 0.15);
+}
+
+.fi::-webkit-outer-spin-button,
+.fi::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.fi:focus::-webkit-outer-spin-button,
+.fi:focus::-webkit-inner-spin-button {
+  -webkit-appearance: inner-spin-button;
+}

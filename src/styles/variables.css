@@ -1,0 +1,79 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+:root,
+.app[data-theme="light"] {
+  --bg0: #f8f8fa;
+  --bg1: #fff;
+  --bgi: #f2f2f5;
+  --brd: #e6e6eb;
+  --brdf: #4a8fd4;
+  --t1: #111118;
+  --t2: #6b6b76;
+  --t3: #9d9da8;
+  --shc: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shh: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  --di: #fafafe;
+  --db: #ebebf0;
+  --fc: #fff;
+  --cb: #f5f5f8;
+  --mb: #ebebf0;
+  --mon: #111118;
+  --mot: #fff;
+  --mt: #8a8a94;
+  --pb: #fff;
+  --pbb: #e0e0e6;
+  --rpb: rgba(212, 115, 82, 0.06);
+  --rpbr: rgba(212, 115, 82, 0.15);
+  --rpt: #d47352;
+  --tb: #d8d8de;
+  --tk: #fff;
+  --to: #111118;
+  --grn: #3d9952;
+  --red: #d44040;
+  --blu: #4a8fd4;
+  --pur: #9b6db5;
+  --orn: #d4945c;
+  --ylw: #c89520;
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-brd: rgba(0, 0, 0, 0.12);
+  --grid-dot: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="dark"],
+.app[data-theme="dark"] {
+  --bg0: #131316;
+  --bg1: #1a1a1f;
+  --bgi: #1e1e23;
+  --brd: #2a2a32;
+  --brdf: #6aaae0;
+  --t1: #ededf0;
+  --t2: #8a8a96;
+  --t3: #55555e;
+  --shc: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shh: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --di: #1a1a1f;
+  --db: #2a2a32;
+  --fc: #1a1a1f;
+  --cb: #16161a;
+  --mb: #222228;
+  --mon: #2e2e38;
+  --mot: #ededf0;
+  --mt: #6a6a76;
+  --pb: #1e1e23;
+  --pbb: #2a2a32;
+  --rpb: rgba(224, 147, 122, 0.06);
+  --rpbr: rgba(224, 147, 122, 0.18);
+  --rpt: #e0937a;
+  --tb: #333;
+  --tk: #555;
+  --to: var(--blu);
+  --grn: #6fc482;
+  --red: #e06060;
+  --blu: #6aaae0;
+  --pur: #b48bcc;
+  --orn: #d4945c;
+  --ylw: #d4a840;
+  --glass: rgba(26, 26, 31, 0.55);
+  --glass-brd: rgba(255, 255, 255, 0.06);
+  --grid-dot: rgba(255, 255, 255, 0.04);
+}

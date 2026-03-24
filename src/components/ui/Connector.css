@@ -1,0 +1,6 @@
+.cn {
+  display: flex;
+  align-items: center;
+  height: 90px;
+  flex-shrink: 0;
+}
