@@ -22,6 +22,7 @@ export function Dashboard({ results, formatNumber, exporting }) {
           <ResultItem label="Counts / Load Rev" value={formatNumber(results.cpl, 0)} color="grn" variant="gr" shimmer={exporting} tip={OUTPUT_TOOLTIPS.cpl} />
           <ResultItem label={`${results.u} / Motor Rev`} value={formatNumber(results.upm, 6)} unit={results.u} color="blu" variant="bl" shimmer={exporting} tip={OUTPUT_TOOLTIPS.upm} />
           <ResultItem label={`${results.u} / Count`} value={formatNumber(results.upc, 8)} unit={results.u} color="pur" variant="pu" shimmer={exporting} tip={OUTPUT_TOOLTIPS.upc} />
+          <ResultItem label={`Counts / ${results.u}`} value={formatNumber(results.cpu, 2)} unit={`ct/${results.u}`} color="pur" variant="pu" shimmer={exporting} tip={OUTPUT_TOOLTIPS.cpu} />
           <ResultItem label={`${results.u} / Load Rev`} value={formatNumber(results.dpl, 6)} unit={results.u} variant="n" shimmer={exporting} tip={OUTPUT_TOOLTIPS.dpl} />
         </div>
       </div>
@@ -32,6 +33,9 @@ export function Dashboard({ results, formatNumber, exporting }) {
           <ResultItem label="Output Torque (w/ eff.)" value={formatNumber(results.tq, 2)} unit="Nm" color="orn" variant="or" shimmer={exporting} tip={OUTPUT_TOOLTIPS.tq} />
           <ResultItem label="Output Shaft Speed" value={formatNumber(results.oRPM, 2)} unit="RPM" color="blu" variant="bl" shimmer={exporting} tip={OUTPUT_TOOLTIPS.oRPM} />
           {results.u !== "deg" && <ResultItem label="Output Linear Speed" value={formatNumber(results.oSpd, 2)} unit={`${results.u}/min`} color="pur" variant="pu" shimmer={exporting} tip={OUTPUT_TOOLTIPS.oSpd} />}
+          {results.u !== "deg" && results.dplM > 0 && (
+            <ResultItem label="Output Linear Force (@ τ_rated)" value={formatNumber(results.oFrc, 1)} unit="N" color="grn" variant="gr" shimmer={exporting} tip={OUTPUT_TOOLTIPS.oFrc} />
+          )}
           <ResultItem label="Total Gear Ratio" value={formatNumber(results.tr)} unit=":1" variant="n" shimmer={exporting} tip={OUTPUT_TOOLTIPS.tr} />
           <ResultItem label="Combined Efficiency" value={formatNumber(results.te * 100, 1)} unit="%" color={results.te > 0.9 ? "grn" : "red"} variant="gr" shimmer={exporting} tip={OUTPUT_TOOLTIPS.te} />
         </div>

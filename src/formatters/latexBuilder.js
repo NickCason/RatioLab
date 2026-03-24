@@ -71,7 +71,9 @@ export function buildLatexSections(chain, outputMode, linearConfig, results) {
     travelExpression = "360";
   }
   let travelTex = `d_{\\text{load}} = ${travelExpression} = ${colorPill(VARIABLE_COLORS.travel, parseFloat(results.dpl.toFixed(4)))}\\;\\text{${results.u}/load rev}\\\\[6pt]`;
-  travelTex += `d_{\\text{motor}} = \\frac{d_{\\text{load}}}{N} = \\frac{${colorPill(VARIABLE_COLORS.travel, parseFloat(results.dpl.toFixed(4)))}}{${colorPill(VARIABLE_COLORS.ratio, parseFloat(results.tr.toFixed(4)))}} = ${parseFloat(results.upm.toFixed(6))}\\;\\text{${results.u}/motor rev}`;
+  travelTex += `d_{\\text{motor}} = \\frac{d_{\\text{load}}}{N} = \\frac{${colorPill(VARIABLE_COLORS.travel, parseFloat(results.dpl.toFixed(4)))}}{${colorPill(VARIABLE_COLORS.ratio, parseFloat(results.tr.toFixed(4)))}} = ${parseFloat(results.upm.toFixed(6))}\\;\\text{${results.u}/motor rev}\\\\[6pt]`;
+  travelTex += `\\frac{\\text{${results.u}}}{\\text{count}} = \\frac{d_{\\text{load}}}{\\text{CPL}} = \\frac{${colorPill(VARIABLE_COLORS.travel, parseFloat(results.dpl.toFixed(4)))}}{${colorPill(VARIABLE_COLORS.enc, parseFloat(results.cpl.toFixed(0)))}} = ${parseFloat(results.upc.toFixed(8))}\\;\\text{${results.u}/ct}\\\\[6pt]`;
+  travelTex += `\\frac{\\text{counts}}{\\text{${results.u}}} = \\frac{\\text{CPL}}{d_{\\text{load}}} = \\frac{${colorPill(VARIABLE_COLORS.enc, parseFloat(results.cpl.toFixed(0)))}}{${colorPill(VARIABLE_COLORS.travel, parseFloat(results.dpl.toFixed(4)))}} = ${parseFloat(results.cpu.toFixed(2))}\\;\\text{ct/${results.u}}`;
   sections.push({ title: "Travel per Revolution", tex: travelTex });
 
   const torqueTex = `\\tau_{\\text{out}} = \\tau_{\\text{motor}} \\times N \\times \\eta = ${servo.ratedTorqueNm || "?"}\\;\\text{Nm} \\times ${colorPill(VARIABLE_COLORS.ratio, parseFloat(results.tr.toFixed(3)))} \\times ${colorPill(VARIABLE_COLORS.eff, parseFloat(results.te.toFixed(4)))} = ${parseFloat(results.tq.toFixed(3))}\\;\\text{Nm}`;
@@ -82,6 +84,11 @@ export function buildLatexSections(chain, outputMode, linearConfig, results) {
     speedTex += `\\\\[6pt]v_{\\text{out}} = ${colorPill(VARIABLE_COLORS.speed, parseFloat(results.oRPM.toFixed(2)))}\\;\\text{RPM} \\times d_{\\text{load}} = ${colorPill(VARIABLE_COLORS.speed, parseFloat(results.oRPM.toFixed(2)))} \\times ${colorPill(VARIABLE_COLORS.travel, parseFloat(results.dpl.toFixed(4)))} = ${parseFloat(results.oSpd.toFixed(2))}\\;\\text{${results.u}/min}`;
   }
   sections.push({ title: "Output Speed", tex: speedTex });
+
+  if (results.u !== "deg" && results.dplM > 0) {
+    const forceTex = `F_{\\text{out}} = \\frac{2\\pi\\,\\tau_{\\text{out}}}{d_{\\text{SI}}} = \\frac{2\\pi \\times ${parseFloat(results.tq.toFixed(3))}\\;\\text{Nm}}{${parseFloat(results.dplM.toFixed(6))}\\;\\text{m}} = ${parseFloat(results.oFrc.toFixed(2))}\\;\\text{N}\\\\[4pt]\\small\\textit{(ideal: } P = \\tau\\omega = Fv \\textit{ with } v = \\omega d_{\\text{SI}}/(2\\pi) \\textit{)}`;
+    sections.push({ title: "Linear Output Force", tex: forceTex });
+  }
   return sections;
 }
 

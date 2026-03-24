@@ -63,6 +63,7 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  box-shadow: var(--shc);
 }
 
 .export-btn:hover {

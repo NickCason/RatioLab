@@ -98,6 +98,14 @@ export const OUTPUT_TOOLTIPS = {
       "\\dfrac{\\text{units}}{\\text{count}} = \\dfrac{d_{\\text{rev}}}{\\text{PPR} \\times 4 \\times R_{\\text{total}}}",
     ],
   },
+  cpu: {
+    title: "Counts / Unit",
+    description:
+      "The number of encoder counts per unit of output travel — the reciprocal of distance per count. Higher values mean finer feedback resolution. This is the value typically entered into a servo drive's electronic gearing or scaling parameter.",
+    math: [
+      "\\dfrac{\\text{counts}}{\\text{unit}} = \\dfrac{\\text{PPR} \\times 4 \\times R_{\\text{total}}}{d_{\\text{rev}}}",
+    ],
+  },
   dpl: {
     title: "Distance / Load Rev",
     description:
@@ -128,6 +136,15 @@ export const OUTPUT_TOOLTIPS = {
       "Linear velocity of the output when the motor runs at rated speed. Combines the output shaft speed with the distance traveled per revolution of the load shaft.",
     math: [
       "v = \\omega_{\\text{out}} \\times d_{\\text{rev}}",
+    ],
+  },
+  oFrc: {
+    title: "Output Linear Force",
+    description:
+      "Ideal linear thrust or tangential force at the motion output when the motor delivers its rated output torque. Derived from power balance at the load shaft: rotary power τω equals linear power Fv, with v = ω d / (2π) for advance d per revolution, so F = 2πτ / d. Uses the same d per load revolution as scaling; stage efficiencies are already included in τ_out. Does not model screw lead angle, rack friction, or peak overload.",
+    math: [
+      "P = \\tau_{\\text{out}} \\, \\omega = F \\, v \\,,\\quad v = \\dfrac{\\omega \\, d_{\\text{SI}}}{2\\pi}",
+      "F_{\\text{out}} = \\dfrac{2\\pi \\, \\tau_{\\text{out}}}{d_{\\text{SI}}} \\quad (d_{\\text{SI}} = \\text{travel/load rev in m})",
     ],
   },
   tr: {

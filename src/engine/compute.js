@@ -45,10 +45,14 @@ export function compute(chain, outputMode, linearConfig, loadInertia) {
 
   const unitsPerMotorRev = motorRevPerLoadRev ? distancePerLoadRev / motorRevPerLoadRev : 0;
   const unitsPerCount = countsPerLoadRev ? distancePerLoadRev / countsPerLoadRev : 0;
+  const countsPerUnit = distancePerLoadRev ? countsPerLoadRev / distancePerLoadRev : 0;
   const motorRpm = num(servo.ratedSpeedRPM, 0);
   const outputRpm = motorRevPerLoadRev ? motorRpm / motorRevPerLoadRev : 0;
   const outputSpeed = outputRpm * distancePerLoadRev;
   const torqueOut = num(servo.ratedTorqueNm, 0) * totalRatio * totalEfficiency;
+  const dplMeters =
+    unit === "deg" || distancePerLoadRev <= 0 ? 0 : unit === "mm" ? distancePerLoadRev * 0.001 : distancePerLoadRev * 0.0254;
+  const linearForceN = dplMeters > 0 ? (2 * Math.PI * torqueOut) / dplMeters : 0;
   const jMotor = num(servo.rotorInertia, 0);
   const jLoad = num(loadInertia, 0);
   const jReflected = totalRatio !== 0 ? jLoad / (totalRatio * totalRatio) : 0;
@@ -61,6 +65,7 @@ export function compute(chain, outputMode, linearConfig, loadInertia) {
     dpl: distancePerLoadRev,
     upm: unitsPerMotorRev,
     upc: unitsPerCount,
+    cpu: countsPerUnit,
     u: unit,
     tr: totalRatio,
     te: totalEfficiency,
@@ -71,6 +76,8 @@ export function compute(chain, outputMode, linearConfig, loadInertia) {
     rpm: motorRpm,
     oRPM: outputRpm,
     oSpd: outputSpeed,
+    dplM: dplMeters,
+    oFrc: linearForceN,
     jMotor,
     jLoad,
     jReflected,

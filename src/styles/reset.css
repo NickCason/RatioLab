@@ -7,13 +7,21 @@
 body {
   font-family: "DM Sans", sans-serif;
   min-height: 100vh;
-  background-color: var(--bg0, #f8f8fa);
+  background-color: var(--bg0);
   background-image:
-    radial-gradient(circle at 50% 50%, transparent 40%, var(--bg0, #f8f8fa) 75%),
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.04) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, transparent 40%, var(--bg0) 75%),
     radial-gradient(var(--grid-dot) 1px, transparent 1px);
-  background-size: 100% 100%, 20px 20px;
+  background-size: 100% 100%, 100% 100%, 20px 20px;
   background-attachment: fixed;
   transition: background-color 0.3s;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 40%, var(--bg0) 75%),
+    radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px;
 }
 
 #root {

@@ -23,6 +23,26 @@
   cursor: grab;
   transition: all 0.2s;
   user-select: none;
+  box-shadow: var(--shc);
+}
+
+.pal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.pal-icon svg {
+  display: block;
+  width: 23px;
+  height: 23px;
+}
+
+.pal-icon-gearbox svg {
+  width: 20px;
+  height: 20px;
 }
 
 .pal-b:hover {

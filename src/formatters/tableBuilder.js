@@ -89,6 +89,12 @@ export function buildFormulaLines(chain, outputMode, linearConfig, results) {
     v: `${f(results.upc, 8)} ${results.u}`,
     raw: true,
   });
+  lines.push({
+    l: `Counts / ${results.u}`,
+    m: `${f(results.cpl, 2)} / ${variableTag("travel", f(results.dpl, 4))}`,
+    v: `${f(results.cpu, 2)} ct/${results.u}`,
+    raw: true,
+  });
 
   lines.push({ section: "Torque & Speed" });
   lines.push({
@@ -108,6 +114,14 @@ export function buildFormulaLines(chain, outputMode, linearConfig, results) {
       l: "Output Linear Speed (v_out)",
       m: `${variableTag("speed", f(results.oRPM, 2))} RPM × ${variableTag("travel", f(results.dpl, 4))}`,
       v: `${f(results.oSpd, 2)} ${results.u}/min`,
+      raw: true,
+    });
+  }
+  if (results.u !== "deg" && results.dplM > 0) {
+    lines.push({
+      l: "Output Linear Force (F_out)",
+      m: `2π × ${f(results.tq, 3)} Nm / ${f(results.dplM, 6)} m`,
+      v: `${f(results.oFrc, 2)} N`,
       raw: true,
     });
   }

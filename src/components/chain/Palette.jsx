@@ -33,7 +33,9 @@ export function Palette({ hasTerminalLinear, dark, onAdd, onPaletteDragStart, on
               onDragStart={(event) => onPaletteDragStart(event, type)}
               onDragEnd={onPaletteDragEnd}
             >
-              <span className="pal-icon">{COMPONENT_ICONS[type](disabled ? "#999" : themes[type].accent)}</span>
+              <span className={`pal-icon ${type === ComponentType.GEARBOX ? "pal-icon-gearbox" : ""}`}>
+                {COMPONENT_ICONS[type](disabled ? "#999" : themes[type].accent)}
+              </span>
               <span>{label}</span>
               {dragOnly && <span className="pal-drag-tag">drag</span>}
             </div>

@@ -62,6 +62,7 @@ export function ChainCanvas({
   const measureRef = useRef(null);
   const [scale, setScale] = useState(1);
   const [height, setHeight] = useState(230);
+  const [yOffset, setYOffset] = useState(0);
   const [needsScroll, setNeedsScroll] = useState(false);
 
   const paletteActive = paletteType != null;
