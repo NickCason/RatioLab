@@ -1,8 +1,12 @@
-name: Deploy to Netlify
+# Pushes to development/dev run a production build check here.
+# Deploy to Netlify is handled by Netlify’s GitHub app (linked repo) — no repo secrets required.
+name: Build (Netlify deploys via Git)
 
 on:
   push:
-    branches: ["master"]
+    branches:
+      - development
+      - dev
   workflow_dispatch:
 
 concurrency:
@@ -10,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,8 +32,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to Netlify (production)
-        run: npx --yes netlify-cli deploy --dir=dist --prod --message "GitHub Actions deploy ${GITHUB_SHA}"
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      - name: Build OK
+        run: echo "Build succeeded. Netlify deploys from your linked Git install when this branch is the production branch."
