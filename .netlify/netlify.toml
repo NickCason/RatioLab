@@ -8,8 +8,8 @@ redirects = []
 
 [build]
 publish = "C:\\Users\\Johnd\\MotionCalc\\dist"
-publishOrigin = "ui"
-commandOrigin = "ui"
+publishOrigin = "config"
+commandOrigin = "config"
 command = "npm run build"
 
 [build.environment]
