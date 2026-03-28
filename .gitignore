@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist/ is committed on main so the repo can be deployed without a remote build step (e.g. static host from Git).
 dist-ssr
 *.local
 
