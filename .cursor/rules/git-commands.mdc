@@ -1,0 +1,22 @@
+---
+description: Always include concrete git commands when git is relevant
+alwaysApply: true
+---
+
+# Git commands
+
+When the answer involves version control (commit, push, branch, deploy from Git, undo, sync, etc.), **always include the recommended `git` commands** in copy-pasteable form (full commands, PowerShell-friendly when the user is on Windows).
+
+Do not only describe steps in prose—pair each workflow with the exact commands to run.
+
+**Typical deploy for this repo (after `npm run build`), if `main` is the default branch:**
+
+```powershell
+cd c:\Users\Johnd\MotionCalc
+git status
+git add -A
+git commit -m "Describe your change"
+git push origin main
+```
+
+Use `master` instead of `main` if that is the project’s default branch.

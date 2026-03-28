@@ -5,7 +5,6 @@ import "./styles/global.css";
 import { ComponentType, OutputDevice } from "./config";
 import { compute, hasTerminalLinear, isLastTerminalLinear, num } from "./engine";
 import { buildFormulaLines, buildLatexSections, formatNumber } from "./formatters";
-import { buildPdfReport } from "./export";
 import { Header } from "./components/header";
 import { ChainCanvas, ModeBar, Palette } from "./components/chain";
 import { Dashboard } from "./components/dashboard";
@@ -62,14 +61,16 @@ export default function App() {
   const latexSections = useMemo(() => buildLatexSections(chain, effectiveMode, lin, results), [chain, effectiveMode, lin, results]);
 
   const onExport = useCallback(() => {
-    buildPdfReport({
-      chain,
-      results,
-      formulaLines,
-      formatNumber,
-      setExporting,
-      latexSections,
-    });
+    void import("./export/buildPdfReport.js").then(({ buildPdfReport }) =>
+      buildPdfReport({
+        chain,
+        results,
+        formulaLines,
+        formatNumber,
+        setExporting,
+        latexSections,
+      }),
+    );
   }, [chain, results, formulaLines, latexSections]);
 
   useEffect(() => {
