@@ -93,6 +93,7 @@ export default function App() {
         onAdd={addComponent}
         onPaletteDragStart={drag.paletteDragStart}
         onPaletteDragEnd={drag.paletteDragEnd}
+        paletteDragging={drag.paletteType != null}
       />
       <ModeBar mode={mode} onSetMode={setMode} isLinearForced={isLinearForced} chain={chain} dark={dark} />
       <ChainCanvas

@@ -26,21 +26,70 @@ function MiniKatex({ tex }) {
   return <span ref={ref} className="tt-katex" />;
 }
 
-export function Tooltip({ content, children, position = "above" }) {
+export function Tooltip({ content, children, position = "above", disabled = false }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
   const tooltipRef = useRef(null);
   const timerRef = useRef(null);
-
-  const show = useCallback(() => {
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setOpen(true), 180);
-  }, []);
+  const hoveringRef = useRef(false);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
 
   const hide = useCallback(() => {
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setOpen(false), 120);
   }, []);
+
+  const scheduleShow = useCallback(() => {
+    if (disabledRef.current) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setOpen(true), 180);
+  }, []);
+
+  const show = useCallback(() => {
+    scheduleShow();
+  }, [scheduleShow]);
+
+  useLayoutEffect(() => {
+    if (disabled) {
+      clearTimeout(timerRef.current);
+      setOpen(false);
+      return;
+    }
+    let rafOuter = 0;
+    let rafInner = 0;
+    const tryResumeIfPointerOverTrigger = () => {
+      if (disabledRef.current) return;
+      const tr = triggerRef.current;
+      if (!tr) return;
+      const hoverCss = typeof tr.matches === "function" && tr.matches(":hover");
+      const focusInside =
+        tr === document.activeElement || (typeof tr.contains === "function" && tr.contains(document.activeElement));
+      if (hoverCss || hoveringRef.current || focusInside) {
+        if (hoverCss) hoveringRef.current = true;
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setOpen(true), 180);
+      }
+    };
+    tryResumeIfPointerOverTrigger();
+    rafOuter = requestAnimationFrame(() => {
+      rafInner = requestAnimationFrame(tryResumeIfPointerOverTrigger);
+    });
+    return () => {
+      cancelAnimationFrame(rafOuter);
+      cancelAnimationFrame(rafInner);
+    };
+  }, [disabled]);
+
+  const handleMouseEnter = useCallback(() => {
+    hoveringRef.current = true;
+    scheduleShow();
+  }, [scheduleShow]);
+
+  const handleMouseLeave = useCallback(() => {
+    hoveringRef.current = false;
+    hide();
+  }, [hide]);
 
   const keepOpen = useCallback(() => {
     clearTimeout(timerRef.current);
@@ -76,7 +125,7 @@ export function Tooltip({ content, children, position = "above" }) {
 
   if (!content) return children;
 
-  const panel = open && createPortal(
+  const panel = open && !disabled && createPortal(
     <div
       ref={tooltipRef}
       className="tt-panel"
@@ -108,10 +157,12 @@ export function Tooltip({ content, children, position = "above" }) {
       <span
         ref={triggerRef}
         className="tt-trigger"
-        onMouseEnter={show}
-        onMouseLeave={hide}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         onFocus={show}
-        onBlur={hide}
+        onBlur={() => {
+          hide();
+        }}
       >
         {children}
       </span>

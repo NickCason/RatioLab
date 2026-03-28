@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ComponentType, CARD_THEMES_DARK, CARD_THEMES_LIGHT, MECHANISM_TOOLTIPS } from "../../config";
 import { COMPONENT_ICONS } from "../../icons";
 import { Tooltip } from "../ui";
@@ -7,7 +8,24 @@ function isTermType(type) {
   return type === ComponentType.RACK_PINION || type === ComponentType.LEADSCREW;
 }
 
-export function Palette({ hasTerminalLinear, dark, onAdd, onPaletteDragStart, onPaletteDragEnd }) {
+export function Palette({ hasTerminalLinear, dark, onAdd, onPaletteDragStart, onPaletteDragEnd, paletteDragging }) {
+  const [palettePointerDown, setPalettePointerDown] = useState(false);
+
+  useEffect(() => {
+    if (!palettePointerDown) return;
+    const clear = () => setPalettePointerDown(false);
+    window.addEventListener("mouseup", clear);
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
+    return () => {
+      window.removeEventListener("mouseup", clear);
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
+    };
+  }, [palettePointerDown]);
+
+  const suppressPaletteTooltip = Boolean(paletteDragging) || palettePointerDown;
+
   const paletteItems = [
     { type: ComponentType.GEARBOX, label: "+ Gearbox" },
     { type: ComponentType.GEAR_MESH, label: "+ Gear Mesh" },
@@ -25,13 +43,20 @@ export function Palette({ hasTerminalLinear, dark, onAdd, onPaletteDragStart, on
         const dragOnly = hasTerminalLinear && !isTerm;
 
         return (
-          <Tooltip key={type} content={MECHANISM_TOOLTIPS[type]} position="below">
+          <Tooltip key={type} content={MECHANISM_TOOLTIPS[type]} position="below" disabled={suppressPaletteTooltip}>
             <div
               className={`pal-b ${disabled ? "off" : ""} ${dragOnly ? "pal-drag-only" : ""}`}
               draggable={!disabled}
+              onMouseDown={(event) => {
+                if (disabled || event.button !== 0) return;
+                setPalettePointerDown(true);
+              }}
               onClick={() => onAdd(type)}
               onDragStart={(event) => onPaletteDragStart(event, type)}
-              onDragEnd={onPaletteDragEnd}
+              onDragEnd={() => {
+                setPalettePointerDown(false);
+                onPaletteDragEnd();
+              }}
             >
               <span className={`pal-icon ${type === ComponentType.GEARBOX ? "pal-icon-gearbox" : ""}`}>
                 {COMPONENT_ICONS[type](disabled ? "#999" : themes[type].accent)}
