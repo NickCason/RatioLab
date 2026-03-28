@@ -4,6 +4,19 @@ import { Card } from "../card";
 import { Connector } from "../ui";
 import "./ChainCanvas.css";
 
+function ChainHint() {
+  return (
+    <div className="chain-hint">
+      <svg className="chain-hint-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <rect x="0.7" y="0.7" width="98.6" height="98.6" rx="3.5" ry="3.5" />
+      </svg>
+      <div className="chain-hint-text">
+        Drag stages from the palette above or click + to extend your motion chain
+      </div>
+    </div>
+  );
+}
+
 function DropSlot({ index, valid, hovered, onHover, onLeave, onSlotDrop }) {
   return (
     <div
@@ -169,11 +182,7 @@ export function ChainCanvas({
             />
           </div>
         ))}
-        {chain.length <= 2 && (
-          <div className="chain-hint">
-            Drag stages from the palette above or click + to extend your motion chain
-          </div>
-        )}
+        {chain.length <= 2 && <ChainHint />}
       </div>
 
       <div className="ci" style={{ transform: `scale(${scale})`, transformOrigin: "top left", transition: "transform .3s ease", width: needsScroll ? `${100 / scale}%` : "auto" }}>
@@ -227,11 +236,7 @@ export function ChainCanvas({
           />
         )}
 
-        {chain.length <= 2 && !paletteActive && (
-          <div className="chain-hint">
-            Drag stages from the palette above or click + to extend your motion chain
-          </div>
-        )}
+        {chain.length <= 2 && !paletteActive && <ChainHint />}
       </div>
     </div>
   );
