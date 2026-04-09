@@ -1,4 +1,4 @@
-name: Deploy to Netlify
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -6,11 +6,16 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: "netlify-production"
+  group: "pages"
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,8 +33,18 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to Netlify (production)
-        run: npx --yes netlify-cli deploy --dir=dist --prod --message "GitHub Actions deploy ${GITHUB_SHA}"
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
