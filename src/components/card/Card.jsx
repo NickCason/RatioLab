@@ -1,4 +1,5 @@
-import { ComponentType, OutputDevice, CARD_THEMES_DARK, CARD_THEMES_LIGHT, MECHANISM_TOOLTIPS } from "../../config";
+import { useRef } from "react";
+import { ComponentType, CARD_THEMES_DARK, CARD_THEMES_LIGHT, MECHANISM_TOOLTIPS } from "../../config";
 import { getBadgeText } from "../../engine";
 import { COMPONENT_ICONS, WATERMARKS } from "../../icons";
 import {
@@ -11,6 +12,7 @@ import {
   ServoFields,
 } from "./fields";
 import { NumberInput, Tooltip } from "../ui";
+import { useCardWatermarkMotion } from "./useCardWatermarkMotion";
 import "./Card.css";
 
 export function Card({
@@ -41,22 +43,27 @@ export function Card({
   const showDup = !isServo && !(isTerminalLinear && hideTermDup);
   const theme = (dark ? CARD_THEMES_DARK : CARD_THEMES_LIGHT)[comp.type];
   const set = (key, value) => onUp(comp.id, { [key]: value });
+  const wmRef = useRef(null);
+  const { onWmEnter, onWmLeave } = useCardWatermarkMotion(comp.type, wmRef);
 
   return (
     <div
       className={`cd ${isDg ? "dg" : ""} ${isDov ? "dov" : ""}`}
+      data-type={comp.type}
       draggable={!isServo}
       style={{
         background: `linear-gradient(135deg,${theme.bg},${theme.bg2})`,
         color: theme.text,
-        border: dark ? `1px solid ${theme.inBrd}` : "1px solid transparent",
+        border: dark ? `1px solid ${theme.inBrd}` : `1px solid ${theme.border}`,
       }}
       onDragStart={(event) => onDS(event, index)}
       onDragEnd={onDE}
       onDragOver={(event) => onDO(event, index)}
       onDrop={(event) => onDr(event, index)}
+      onMouseEnter={onWmEnter}
+      onMouseLeave={onWmLeave}
     >
-      <div className="cd-wm" style={{ color: theme.text }} dangerouslySetInnerHTML={{ __html: WATERMARKS[comp.type] }} />
+      <div ref={wmRef} className="cd-wm" style={{ color: theme.text }} dangerouslySetInnerHTML={{ __html: WATERMARKS[comp.type] }} />
       <Tooltip content={MECHANISM_TOOLTIPS[comp.type]} position="above">
         <div className="cd-ribbon" style={{ background: theme.badge, color: theme.icon }}>?</div>
       </Tooltip>

@@ -6,6 +6,8 @@
   position: relative;
   overflow: hidden;
   box-shadow: var(--shc);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .cd:hover {
@@ -31,6 +33,23 @@
   height: 130px;
   opacity: 0.07;
   pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.cd:hover .cd-wm {
+  opacity: 0.18;
+}
+
+.cd[data-type="gear_mesh"] .cd-wm,
+.cd[data-type="belt_pulley"] .cd-wm,
+.cd[data-type="lead_screw"] .cd-wm {
+  bottom: -30px;
+}
+
+/* --- Watermark animations (JS-driven, see Card.jsx) --- */
+
+.cd-wm svg {
+  transform-origin: center;
 }
 
 .cd-h {
@@ -75,10 +94,19 @@
 }
 
 .cd-nm:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(128, 128, 128, 0.08);
 }
 
 .cd-nm:focus {
+  background: rgba(128, 128, 128, 0.1);
+  box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.15);
+}
+
+[data-theme="dark"] .cd-nm:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .cd-nm:focus {
   background: rgba(255, 255, 255, 0.12);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
@@ -107,6 +135,10 @@
 }
 
 .cd-ab:hover {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+[data-theme="dark"] .cd-ab:hover {
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -177,8 +209,8 @@
 .ct {
   padding: 6px 12px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(128, 128, 128, 0.18);
+  background: rgba(128, 128, 128, 0.06);
   font-family: "DM Sans", sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -187,6 +219,16 @@
 }
 
 .ct.on {
+  background: rgba(128, 128, 128, 0.14);
+  border-color: rgba(128, 128, 128, 0.3);
+}
+
+[data-theme="dark"] .ct {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .ct.on {
   background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.35);
 }
@@ -195,8 +237,8 @@
   width: 100%;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(128, 128, 128, 0.18);
+  background: rgba(128, 128, 128, 0.06);
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   outline: none;
@@ -204,16 +246,28 @@
   -webkit-appearance: none;
   appearance: none;
   color: inherit;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,.5)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(100,100,100,.4)'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 28px;
 }
 
+[data-theme="dark"] .cs {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,.5)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
 .lc {
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(128, 128, 128, 0.12);
+}
+
+[data-theme="dark"] .lc {
+  border-top-color: rgba(255, 255, 255, 0.12);
 }
 
 .bp {
